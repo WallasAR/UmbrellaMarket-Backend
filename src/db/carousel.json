@@ -1,0 +1,24 @@
+{
+  "imagens": [
+    {
+      "src": "assets/imagem1.jpg",
+      "alt": "Imagem 1"
+    },
+    {
+      "src": "assets/imagem2.jpg",
+      "alt": "Imagem 2"
+    },
+    {
+      "src": "assets/imagem3.jpg",
+      "alt": "Imagem 3"
+    },
+    {
+      "src": "assets/imagem4.jpg",
+      "alt": "Imagem 4"
+    },
+    {
+      "src": "assets/imagem5.jpg",
+      "alt": "Imagem 5"
+    }
+  ]
+}
