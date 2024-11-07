@@ -126,6 +126,7 @@
   {
     "id": 10,
     "estoque": 0,
+    "desconto": 10,
     "nome": "Losartana 50mg",
     "preco": 1.7,
     "descricao": "Medicamento utilizado para o controle da hipertensão arterial.",
@@ -227,6 +228,45 @@
       "https://santaluciadrogaria.vtexassets.com/arquivos/ids/157750/7896004718798.png?v=637637997971170000",
       "https://farmaceuticodigital.com/wp-content/uploads/2017/05/medicamento-generico1.png",
       "https://farmaceuticodigital.com/wp-content/uploads/2017/05/medicamento-generico-sem-tarja.png"
+    ]
+  },
+  {
+    "id": 18,
+    "estoque": 50,
+    "nome": "Viagra 50mg",
+    "preco": 29.9,
+    "descricao": "Viagra é um medicamento indicado para o tratamento de disfunção erétil em homens. Auxilia no aumento do fluxo sanguíneo para facilitar a ereção durante o estímulo sexual, proporcionando uma vida sexual mais saudável.",
+    "imagem": "https://res.cloudinary.com/zava-www-uk/image/upload/a_exif,f_auto,e_sharpen:100,c_fit,w_800,h_600,fl_lossy/v1710931651/sd/uk/services-setup/erectile-dysfunction-unit/viagra/xvehggxijmbd9xr4eefn.png",
+    "imagens": [
+      "https://res.cloudinary.com/zava-www-uk/image/upload/a_exif,f_auto,e_sharpen:100,c_fit,w_800,h_600,fl_lossy/v1710931651/sd/uk/services-setup/erectile-dysfunction-unit/viagra/xvehggxijmbd9xr4eefn.png",
+      "https://www.iqdoctor.co.uk/product_images/erectile-dysfunction-viagra-100mg-front.png",
+      "https://www.iqdoctor.co.uk/product_images/erectile-dysfunction-viagra-100mg-front-with-tablets.png"
+    ]
+  },
+  {
+    "id": 19,
+    "estoque": 15,
+    "nome": "T-Virus",
+    "preco": 1500.0,
+    "descricao": "O T-Virus é um agente viral experimental desenvolvido pela Umbrella Corporation para pesquisas de bioengenharia. Conhecido por induzir mutações extremas em organismos infectados, é altamente perigoso e estritamente proibido para uso humano.",
+    "imagem": "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/9b72e0d1-448e-460c-8a28-c68ed4708bb8/d4l95qs-e3084a9a-ebef-4090-92f6-bbe8f4689da5.png/v1/fill/w_1000,h_710/t_virus_and_anti_virus_render_by_pimplypete_d4l95qs-fullview.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9NzEwIiwicGF0aCI6IlwvZlwvOWI3MmUwZDEtNDQ4ZS00NjBjLThhMjgtYzY4ZWQ0NzA4YmI4XC9kNGw5NXFzLWUzMDg0YTlhLWViZWYtNDA5MC05MmY2LWJiZThmNDY4OWRhNS5wbmciLCJ3aWR0aCI6Ijw9MTAwMCJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS5vcGVyYXRpb25zIl19.ehAEJhKp--Xoz3ANiGWKyxMzdndy_WFqkwdKPEobHDo",
+    "imagens": [
+      "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/9b72e0d1-448e-460c-8a28-c68ed4708bb8/d4l95qs-e3084a9a-ebef-4090-92f6-bbe8f4689da5.png/v1/fill/w_1000,h_710/t_virus_and_anti_virus_render_by_pimplypete_d4l95qs-fullview.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9NzEwIiwicGF0aCI6IlwvZlwvOWI3MmUwZDEtNDQ4ZS00NjBjLThhMjgtYzY4ZWQ0NzA4YmI4XC9kNGw5NXFzLWUzMDg0YTlhLWViZWYtNDA5MC05MmY2LWJiZThmNDY4OWRhNS5wbmciLCJ3aWR0aCI6Ijw9MTAwMCJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS5vcGVyYXRpb25zIl19.ehAEJhKp--Xoz3ANiGWKyxMzdndy_WFqkwdKPEobHDo",
+      "https://static.vecteezy.com/system/resources/previews/020/954/290/non_2x/virus-spiral-isolated-on-transparent-background-free-png.png",
+      "https://static.vecteezy.com/system/resources/previews/020/954/380/non_2x/virus-spiral-isolated-on-transparent-background-free-png.png"
+    ]
+  },
+  {
+    "id": 20,
+    "estoque": 10,
+    "nome": "G-Virus",
+    "preco": 2000.0,
+    "descricao": "O G-Virus é uma mutação avançada do T-Virus, capaz de gerar mutações e regeneração em níveis sem precedentes. Esta versão experimental foi desenvolvida para criar super-humanos, mas resulta em efeitos colaterais instáveis e mutações descontroladas.",
+    "imagem": "https://umbrella-online.co.uk/wiki_files/items/re2/g-virus.png",
+    "imagens": [
+      "https://umbrella-online.co.uk/wiki_files/items/re2/g-virus.png",
+      "https://exemplo.com/imagens/gvirus_alt1.png",
+      "https://exemplo.com/imagens/gvirus_alt2.png"
     ]
   }
 ]

@@ -2,14 +2,19 @@
 const express = require("express"); // express module
 const cors = require("cors"); 
 const app = express(); // instance of express
+const hostname = 'localhost';
 const PORT = 999; // Port localhost
+const http = require('http'); // Importa o módulo HTTP
 
 // File Manipulation
 const fs = require("fs");
 const path = require("path");
 
+require('dotenv').config();
+
 // Importation Middleware
 const { router: authRoutes, autenticateToken } = require("./auth"); // Importa `router` e `autenticateToken`
+const cartRoutes = require("./cart");
 
 // Add jsons (retire this wallinhas!, make requests in routes)
 const products = require("../db/products.json");
@@ -18,7 +23,16 @@ const cartProducts = require("../db/cart.json");
 app.use(cors());
 app.use(express.json());
 
+// Autentication routes
 app.use("/api", authRoutes);
+
+// Checkout routes
+app.use("/api", cartRoutes);
+
+// index route
+app.get('/', (req, res) => {
+    res.send('Server online');
+});
 
 // Search Products
 app.get("/api/products", (req, res) => {
@@ -107,7 +121,7 @@ app.put("/api/cart", (req, res) => {
 
 
 // Rota para listar carrinho
-app.get("/api/cart", (req, res) => {
+app.get("/api/cart", autenticateToken, (req, res) => {
     res.json(cartProducts);
     res.status(200).json({message: "OK"});
 });
@@ -130,6 +144,27 @@ app.delete("/api/cart/:id", (req, res) => {
     res.status(200).json({message: "OK"});
 });
 
-app.listen(PORT, "localhost", () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
+app.listen(PORT, hostname, () => {
+    console.log(`Servidor rodando em http://${hostname}:${PORT}`);
+  
+    // Inicia o ping a cada 3000ms (3 segundos) após o servidor ser iniciado
+    setInterval(() => {
+        let startRequest = new Date().getTime();
+
+        const req = http.request({
+            hostname: hostname,
+            port: PORT,
+            path: '/' // Garante que a requisição acesse a rota principal
+        }, (res) => {
+            const pingTime = new Date().getTime() - startRequest;
+            console.log(`${res.statusCode} | ${hostname} | ${pingTime}ms | ${new Date().toISOString().slice(0, 19).replace('T', ' ')}`);
+        });
+
+        req.on('error', (e) => {
+            console.log('Erro: ' + e.message);
+        });
+
+        req.end();
+    }, 3000);
 });
+
