@@ -1,4 +1,4 @@
-# Umbrella Marketplace - Back-End
+![Img](https://lh3.googleusercontent.com/pw/AP1GczPOBheu7DpbvY8uGOXMCpz8MS09PEFSPfY434VDHPyS-3UWemaxGZ1Z7m6Uy7qX8A5t7i2kNj3KAkgR52vuSocVg-TdqRn54umKFh7Bjg7QYnRxSBuAkkj4Ow9KQ5dI-Ls4S3hlhlN3aeDrs-L-l6pl=w1920-h480-s-no-gm?authuser=0)
 
 This repository contains the Back-End of the **Umbrella Marketplace** application, an e-commerce platform for selling medicines. The API was developed to offer authenticated and well-structured routes to manage users, products and the shopping cart.
 
