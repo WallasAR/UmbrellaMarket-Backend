@@ -10,20 +10,33 @@ The API was organized in a modular way, with each functionality in dedicated fil
 
 ```plaintext
 UmbrellaMarket-Backend/
-│
 ├── src/
-│   ├── routes/
-│   │   ├── auth.js      # Authentication routes
-│   │   ├── cart.js      # Routes for cart management
-│   │   └── server.js    # Core Server Configuration and Generic Routes
+│   ├── routes/          # API routes
+│   │   ├── index.js     # Import all routes
+│   │   ├── auth.js      # User auth Routes
+│   │   ├── cart.js      # Cart routes
+|   |   ├── checkout.js  # Payment routes
+│   │   └── medicine.js  # Product routes
 │   │
-│   ├── controllers/     # Controllers to separate logic from routes
-│   ├── models/          # Database models
-│   └── middlewares/     # Authentication and validation middleware
+│   ├── controllers/              # Route control logic
+│   │   ├── medicineController.js  # Product controller
+│   │   ├── cartController.js     # Cart Controller
+│   │   └── authController.js     # User auth controller
+│   │
+│   ├── services/              # Services for business rules and integration (e.g., Supabase)
+│   │   ├── database.js        # Connection to Supabase
+│   │   ├── cartService.js     # Cart services
+│   │   └── medicineService.js  # Product services 
+│   │
+│   ├── middlewares/     # Middleware for authentication and validation
+│   │   └── authMiddleware.js 
+│   │
+│   └── app.js           # Express config
 │
 ├── .env                 # Environment variables
-├── package.json         # Project dependencies and configurations
-└── README.md            # API documentation
+├── package.json         # Project dependencies
+└── README.md            # Project documentation
+
 ```
 
 ### Description of Folders
