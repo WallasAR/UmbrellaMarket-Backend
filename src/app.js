@@ -3,6 +3,7 @@ import cors from 'cors';
 import routes from './routes/index.js';
 import dotenv from 'dotenv';
 import http from 'http';
+import errorMiddleware from './middlewares/errorMiddleware.js';
 
 dotenv.config();
 
@@ -16,6 +17,9 @@ app.use(express.json());
 // Routes
 app.use("/api", routes);
 
+// Middleware for handle errors
+app.use(errorMiddleware);
+
 // index route
 app.get('/', (req, res) => {
     res.send('Server online');
@@ -25,7 +29,7 @@ app.get('/', (req, res) => {
 app.listen(PORT, hostname, () => {
     console.log(`Servidor rodando em http://${hostname}:${PORT}`);
   
-    // Inicia o ping a cada 3000ms (3 segundos) após o servidor ser iniciado
+    // Starts ping every 3000ms (3 seconds) after the server starts
     setInterval(() => {
         const startRequest = Date.now();
 
@@ -33,7 +37,7 @@ app.listen(PORT, hostname, () => {
             {
                 hostname: hostname,
                 port: PORT,
-                path: "/", // Rota principal
+                path: "/", // Main route
             },
             (res) => {
                 const pingTime = Date.now() - startRequest;

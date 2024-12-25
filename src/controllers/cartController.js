@@ -5,19 +5,18 @@ import {
   deleteProductFromCart,
 } from "../services/cartService.js"
 
-const listCart = async (req, res) => {
+const listCart = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const card = await getCart(userId);
 
     res.status(200).json(card);
   } catch (error) {
-    res.status(500).json({ message: `${error.message}` });
-
+    next(error);
   }
 };
 
-const addToCart = async (req, res) => {
+const addToCart = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { productId, quantity } = req.body;
@@ -26,7 +25,7 @@ const addToCart = async (req, res) => {
 
     res.status(201).json(result);
   } catch (error) {
-    res.status(500).json({ message: `${error.message}` });
+    next(error);
   }
 };
 

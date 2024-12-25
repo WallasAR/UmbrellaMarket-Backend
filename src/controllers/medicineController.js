@@ -1,6 +1,6 @@
 import { fetchProducts, fetchProduct } from '../services/medicineService.js';
 
-const getProducts = async (req, res) => {
+const getProducts = async (req, res, next) => {
   try {
     const { discount, stock } = req.query;
 
@@ -8,11 +8,11 @@ const getProducts = async (req, res) => {
     
     res.status(200).json(products);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
-const getProduct = async (req, res) => {
+const getProduct = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
 
@@ -20,7 +20,7 @@ const getProduct = async (req, res) => {
     
     res.status(200).json(product);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   };
 };
 

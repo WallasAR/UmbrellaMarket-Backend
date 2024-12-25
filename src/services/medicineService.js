@@ -35,7 +35,12 @@ const fetchProduct = async (id) => {
   .select(`
     *,
     Images(thumb_img, primary_img, secondary_img, tertiary_img)`)
-  .eq("id", id);
+  .eq("id", id)
+  .single();
+
+  if (data == null) {
+    throw new Error("Product not found")
+  }
 
   if (error) {
     throw new Error(error.message);
