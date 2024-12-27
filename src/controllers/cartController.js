@@ -8,7 +8,7 @@ import {
 // Util for validation of cart input
 const validateCartInput = (userId, medicine_id, quantity) => {
   if (!userId || !medicine_id || quantity === undefined) {
-    throw new Error("User, product, and quantity must be specified");
+    throw new Error("User, product and quantity must be specified");
   }
 
   if (typeof medicine_id !== "number" || typeof quantity !== "number") {
