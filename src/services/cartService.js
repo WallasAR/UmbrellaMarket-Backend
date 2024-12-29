@@ -84,13 +84,9 @@ const deleteProductFromCart = async (userId, productId) => {
 
   if (error) {
     throw new Error(error.message);
-  }
+  };
 
-  if (!data) {
-    throw new Error("Product not found in the cart");
-  }
-
-  return data;
+  return;
 };
 
 export { 

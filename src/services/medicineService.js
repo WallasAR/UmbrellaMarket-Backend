@@ -8,7 +8,6 @@ const fetchProducts = async ({ discount, stock }) => {
     Images(thumb_img)
     `);
 
-  // Problems, resolve later
   if (discount) {
     query = query.gt("discount", 0); // method ".gt" == "greater than"
   }
@@ -27,9 +26,7 @@ const fetchProducts = async ({ discount, stock }) => {
   return data;
 };
 
-const fetchProduct = async (id) => {
-  if (typeof id !== "number" || isNaN(id)) throw Error("Invalid product")   
-    
+const fetchProduct = async (id) => {  
   const { data, error } = await sdb
   .from("Medicine")
   .select(`
