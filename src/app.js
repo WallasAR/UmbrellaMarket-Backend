@@ -4,6 +4,8 @@ import routes from './routes/index.js';
 import dotenv from 'dotenv';
 import http from 'http';
 import errorMiddleware from './middlewares/errorMiddleware.js';
+import path from "path";
+import setupSwagger from './doc/index.js';
 
 dotenv.config();
 
@@ -19,6 +21,12 @@ app.use("/api", routes);
 
 // Middleware for handle errors
 app.use(errorMiddleware);
+
+// static routes
+app.use('/static', express.static(path.join(path.resolve(), 'src/public')));
+
+// Documentation
+setupSwagger(app);
 
 // index route
 app.get('/', (req, res) => {
