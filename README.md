@@ -10,20 +10,39 @@ The API was organized in a modular way, with each functionality in dedicated fil
 
 ```plaintext
 UmbrellaMarket-Backend/
-│
 ├── src/
-│   ├── routes/
-│   │   ├── auth.js      # Authentication routes
-│   │   ├── cart.js      # Routes for cart management
-│   │   └── server.js    # Core Server Configuration and Generic Routes
+│   ├── routes/           # API routes
+│   │   ├── index.js      # Import all routes
+│   │   ├── auth.js       # User auth routes
+│   │   ├── cart.js       # Cart routes
+│   │   ├── checkout.js   # Payment routes
+│   │   ├── medicine.js   # Product routes
+│   │   └── user.js       # User profile routes
 │   │
-│   ├── controllers/     # Controllers to separate logic from routes
-│   ├── models/          # Database models
-│   └── middlewares/     # Authentication and validation middleware
+│   ├── controllers/               # Route control logic
+│   │   ├── authController.js      # User auth controller
+│   │   ├── cartController.js      # Cart controller
+│   │   ├── checkoutController.js  # Payment/checkout controller
+│   │   ├── medicineController.js  # Product controller
+│   │   └── userController.js      # User profile controller
+│   │
+│   ├── services/               # Services for business rules and integration (e.g., Supabase)
+│   │   ├── database.js         # Connection to Supabase
+│   │   ├── authService.js      # Auth services
+│   │   ├── cartService.js      # Cart services
+│   │   ├── checkoutService.js  # Payment/checkout services
+│   │   ├── medicineService.js  # Product services
+│   │   └── userService.js      # User profile services
+│   │
+│   ├── middlewares/           # Middlewares
+│   │   ├── authMiddleware.js  # Authentication middleware
+│   │   └── errorMiddleware.js # Error handling middleware
+│   │
+│   └── app.js            # Express config
 │
-├── .env                 # Environment variables
-├── package.json         # Project dependencies and configurations
-└── README.md            # API documentation
+├── .env                  # Environment variables
+├── package.json          # Project dependencies
+└── README.md             # Project documentation
 ```
 
 ### Description of Folders
@@ -93,18 +112,6 @@ UmbrellaMarket-Backend/
    ```
 
    The server will be running on `http://localhost:3000` (or another configured port).
-
----
-
-## Important Endpoints
-
-| Method | Endpoint           | Description               | Authentication |
-| ------ | ------------------ | ------------------------- | -------------- |
-| POST   | `/login`           | User login                | ❌              |
-| POST   | `/register`        | User registration         | ❌              |
-| GET    | `/cart`            | List items in the cart    | ✅              |
-| POST   | `/cart/add`        | Add item to the cart      | ✅              |
-| DELETE | `/cart/remove/:id` | Remove item from the cart | ✅              |
 
 ---
 

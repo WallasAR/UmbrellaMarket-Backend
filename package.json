@@ -4,13 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "server0": "node ./src/routes/server.js",
-    "server1": "nodemon ./src/routes/server.js"
+    "prod": "node ./src/app.js",
+    "dev": "nodemon ./src/app.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "WallasAR",
   "license": "ISC",
   "dependencies": {
+    "@supabase/supabase-js": "^2.47.2",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.3",
     "cor": "^0.0.0",
@@ -19,9 +20,12 @@
     "express": "^4.21.1",
     "jsonwebtoken": "^9.0.2",
     "stripe": "^17.3.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "uuid": "^11.0.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.7"
-  }
+  },
+  "type": "module"
 }
