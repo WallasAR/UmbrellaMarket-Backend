@@ -11,7 +11,7 @@ dotenv.config();
 
 const app = express();
 const hostname = process.env.HOSTNAME;
-const PORT = process.env.PORT;
+const port = process.env.PORT || 4000;
 
 app.use(cors());
 app.use(express.json());
@@ -34,34 +34,6 @@ app.get('/', (req, res) => {
 });
 
 // Listen ping
-app.listen(PORT, hostname, () => {
-    console.log(`Servidor rodando em http://${hostname}:${PORT}`);
-  
-    // // Starts ping every 3000ms (3 seconds) after the server starts
-    // setInterval(() => {
-    //     const startRequest = Date.now();
-
-    //     const req = http.request(
-    //         {
-    //             hostname: hostname,
-    //             port: PORT,
-    //             path: "/", // Main route
-    //         },
-    //         (res) => {
-    //             const pingTime = Date.now() - startRequest;
-    //             console.log(
-    //                 `${res.statusCode} | ${hostname} | ${pingTime}ms | ${new Date()
-    //                     .toISOString()
-    //                     .slice(0, 19)
-    //                     .replace("T", " ")}`
-    //             );
-    //         }
-    //     );
-
-    //     req.on("error", (e) => {
-    //         console.error(`Erro ao pingar servidor: ${e.message}`);
-    //     });
-
-    //     req.end();
-    // }, 3000);
-});
+app.listen(port, () => {
+    console.log(`Example app listening on port ${port}`)
+  })
