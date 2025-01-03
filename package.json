@@ -2,10 +2,10 @@
   "name": "umbrellamarketp_node",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./src/app.js",
   "scripts": {
-    "prod": "node ./src/app.js",
-    "dev": "nodemon ./src/app.js"
+    "start": "node ./src/app.js",
+    "server": "nodemon ./src/app.js"
   },
   "keywords": [],
   "author": "WallasAR",
