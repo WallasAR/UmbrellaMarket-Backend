@@ -11,13 +11,13 @@ The API was organized in a modular way, with each functionality in dedicated fil
 ```plaintext
 UmbrellaMarket-Backend/
 ├── src/
-│   ├── routes/           # API routes
-│   │   ├── index.js      # Import all routes
-│   │   ├── auth.js       # User auth routes
-│   │   ├── cart.js       # Cart routes
-│   │   ├── checkout.js   # Payment routes
-│   │   ├── medicine.js   # Product routes
-│   │   └── user.js       # User profile routes
+│   ├── routes/                    # API routes
+│   │   ├── index.js               # Import all routes
+│   │   ├── auth.js                # User auth routes
+│   │   ├── cart.js                # Cart routes
+│   │   ├── checkout.js            # Payment routes
+│   │   ├── medicine.js            # Product routes
+│   │   └── user.js                # User profile routes
 │   │
 │   ├── controllers/               # Route control logic
 │   │   ├── authController.js      # User auth controller
@@ -26,23 +26,35 @@ UmbrellaMarket-Backend/
 │   │   ├── medicineController.js  # Product controller
 │   │   └── userController.js      # User profile controller
 │   │
-│   ├── services/               # Services for business rules and integration (e.g., Supabase)
-│   │   ├── database.js         # Connection to Supabase
-│   │   ├── authService.js      # Auth services
-│   │   ├── cartService.js      # Cart services
-│   │   ├── checkoutService.js  # Payment/checkout services
-│   │   ├── medicineService.js  # Product services
-│   │   └── userService.js      # User profile services
+│   ├── services/                  # Services for business rules and integration (e.g., Supabase)
+│   │   ├── database.js            # Connection to Supabase
+│   │   ├── authService.js         # Auth services
+│   │   ├── cartService.js         # Cart services
+│   │   ├── checkoutService.js     # Payment/checkout services
+│   │   ├── medicineService.js     # Product services
+│   │   └── userService.js         # User profile services
 │   │
-│   ├── middlewares/           # Middlewares
-│   │   ├── authMiddleware.js  # Authentication middleware
-│   │   └── errorMiddleware.js # Error handling middleware
+│   ├── middlewares/               # Middlewares
+│   │   ├── authMiddleware.js      # Authentication middleware
+│   │   └── errorMiddleware.js     # Error handling middleware
 │   │
-│   └── app.js            # Express config
+│   ├── public/                    # Static files
+│   │   ├── swaggerJs.js           # Swagger UI javascript
+│   │   └── assets/                # Swagger UI assets (images, icons, ...)
+│   │
+│   ├── config/					           # Settings (Swagger documentation)
+│   │   ├── swagger.js             # Swagger parameter config
+│   │   └── swaggerUI.css          # Swagger UI stylesheet
+│   │
+│   ├── doc/			                 # Endpoints documentation
+│   │   ├── index.js               # Swagger init
+│   │   └── routes/                # All documented routes
+│   │
+│   └── app.js                     # Express config
 │
-├── .env                  # Environment variables
-├── package.json          # Project dependencies
-└── README.md             # Project documentation
+├── .env                           # Environment variables
+├── package.json                   # Project dependencies
+└── README.md                      # Project documentation
 ```
 
 ### Description of Folders
