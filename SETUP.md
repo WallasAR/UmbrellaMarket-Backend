@@ -24,7 +24,7 @@ Crie um arquivo `.env` na raiz do backend:
 PORT=4000
 
 SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_API_KEY=sua_chave_supabase
+SUPABASE_API_KEY=sua_service_role_key
 
 JWT_TOKEN=uma_chave_segura
 
@@ -59,6 +59,9 @@ migrations/002_reviews_subscriptions_webhooks.sql
 migrations/003_pharmacy_operations.sql
 migrations/004_saas_onboarding.sql
 migrations/005_pharmacy_billing.sql
+migrations/006_push_notifications.sql
+migrations/007_medicine_pharmacy_relationship.sql
+migrations/008_catalog_rls_and_stock.sql
 ```
 
 Essas migrations adicionam:
@@ -77,6 +80,9 @@ Essas migrations adicionam:
 - Status operacional e plano da farmácia
 - Planos SaaS (`SaasPlan`), onboarding de farmácias e comissões por venda
 - Billing Stripe das farmácias (`stripe_customer_id`, `stripe_subscription_id`)
+- Push notifications no navegador (`User.push_subscription`)
+- Farmácia padrão para medicamentos existentes e FK `Medicine.pharmacy_id` → `Pharmacy.id`
+- Políticas RLS de leitura do catálogo (`Medicine`, `Pharmacy`, `Images`) e estoque mínimo para medicamentos legados
 
 ## Rodando localmente
 

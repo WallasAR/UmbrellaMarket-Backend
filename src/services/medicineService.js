@@ -1,16 +1,20 @@
 import sdb from "./database.js";
 
+const PRODUCT_SELECT = `
+  *,
+  Images!left(thumb_img),
+  Pharmacy!left(id, name, city)
+`;
+
+const parseQueryBoolean = (value) => value === true || value === "true";
+
 const fetchProducts = async ({ discount, stock, q, category, minPrice, maxPrice, pharmacyId, sort }) => {
   let query = sdb
     .from("Medicine")
-    .select(`
-      *,
-      Images(thumb_img),
-      Pharmacy(id, name, city)
-    `);
+    .select(PRODUCT_SELECT);
 
-  if (discount) query = query.gt("discount", 0);
-  if (stock) query = query.gt("stock", 0);
+  if (parseQueryBoolean(discount)) query = query.gt("discount", 0);
+  if (parseQueryBoolean(stock)) query = query.gt("stock", 0);
   if (category) query = query.eq("category", category);
   if (pharmacyId) query = query.eq("pharmacy_id", pharmacyId);
   if (minPrice) query = query.gte("price", Number(minPrice));
@@ -42,8 +46,8 @@ const fetchProduct = async (id) => {
     .from("Medicine")
     .select(`
       *,
-      Images(thumb_img, primary_img, secondary_img, tertiary_img),
-      Pharmacy(id, name, city, address)
+      Images!left(thumb_img, primary_img, secondary_img, tertiary_img),
+      Pharmacy!left(id, name, city, address)
     `)
     .eq("id", id)
     .single();
