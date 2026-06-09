@@ -5,6 +5,7 @@ import webhookRoutes from './routes/webhooks.js';
 import dotenv from 'dotenv';
 import errorMiddleware from './middlewares/errorMiddleware.js';
 import { apiLimiter, webhookLimiter } from './middlewares/rateLimitMiddleware.js';
+import requestLogger from './middlewares/requestLoggerMiddleware.js';
 import path from "path";
 import setupSwagger from './doc/index.js';
 
@@ -14,6 +15,7 @@ const app = express();
 const port = process.env.PORT || 4000;
 
 app.use(cors());
+app.use(requestLogger);
 
 // Stripe webhook must receive raw body before JSON parser
 app.use('/api/webhooks', webhookLimiter, webhookRoutes);
