@@ -93,6 +93,44 @@ const activateSubscription = async ({ userId, medicineId, quantity, stripeSubscr
   return data;
 };
 
+const cancelSubscriptionByStripeId = async (stripeSubscriptionId) => {
+  const { data } = await sdb
+    .from("Subscription")
+    .select("id, user_id, Medicine(name)")
+    .eq("stripe_subscription_id", stripeSubscriptionId)
+    .maybeSingle();
+
+  if (!data) return;
+
+  await sdb.from("Subscription").update({ status: "cancelled" }).eq("id", data.id);
+
+  await createNotification({
+    user_id: data.user_id,
+    title: "Assinatura cancelada",
+    message: `Sua assinatura de ${data.Medicine?.name || "medicamento"} foi cancelada.`,
+    type: "subscription"
+  });
+};
+
+const markSubscriptionPaymentFailed = async (stripeSubscriptionId) => {
+  const { data } = await sdb
+    .from("Subscription")
+    .select("id, user_id, Medicine(name)")
+    .eq("stripe_subscription_id", stripeSubscriptionId)
+    .maybeSingle();
+
+  if (!data) return;
+
+  await sdb.from("Subscription").update({ status: "past_due" }).eq("id", data.id);
+
+  await createNotification({
+    user_id: data.user_id,
+    title: "Falha no pagamento da assinatura",
+    message: `Não foi possível cobrar sua assinatura de ${data.Medicine?.name || "medicamento"}. Atualize seu cartão.`,
+    type: "alert"
+  });
+};
+
 const cancelSubscription = async (userId, subscriptionId) => {
   const { data, error } = await sdb
     .from("Subscription")
@@ -114,5 +152,7 @@ export {
   listUserSubscriptions,
   createSubscriptionCheckout,
   activateSubscription,
-  cancelSubscription
+  cancelSubscription,
+  cancelSubscriptionByStripeId,
+  markSubscriptionPaymentFailed
 };

@@ -12,14 +12,19 @@ function generateUniqueId() {
 
 const signToken = (user) =>
   jwt.sign(
-    { id: user.id, email: user.email, role: user.role || "customer" },
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role || "customer",
+      pharmacy_id: user.pharmacy_id || null
+    },
     process.env.JWT_TOKEN
   );
 
 const userLogin = async ({ email, pass }) => {
   const { data, error } = await sdb
     .from("User")
-    .select("id, pass, role, email")
+    .select("id, pass, role, email, pharmacy_id")
     .eq("email", email)
     .single();
 

@@ -7,7 +7,11 @@ import { validateCoupon, incrementCouponUsage } from "./couponService.js";
 import { hasApprovedPrescription } from "./prescriptionService.js";
 import { createNotification } from "./notificationService.js";
 import { sendEmail } from "./emailService.js";
-import { activateSubscription } from "./subscriptionService.js";
+import {
+  activateSubscription,
+  cancelSubscriptionByStripeId,
+  markSubscriptionPaymentFailed
+} from "./subscriptionService.js";
 
 dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_KEY);
@@ -260,6 +264,15 @@ const handleStripeWebhook = async (rawBody, signature) => {
 
   if (event.type === "checkout.session.async_payment_failed") {
     await updatePurchaseStatus(event.data.object.id, "unpaid");
+  }
+
+  if (event.type === "customer.subscription.deleted") {
+    await cancelSubscriptionByStripeId(event.data.object.id);
+  }
+
+  if (event.type === "invoice.payment_failed") {
+    const subscriptionId = event.data.object.subscription;
+    if (subscriptionId) await markSubscriptionPaymentFailed(subscriptionId);
   }
 
   await markEventProcessed(event.id, event.type);
