@@ -6,75 +6,59 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Generate UUID for user
 function generateUniqueId() {
-    return uuidv4();
-};
+  return uuidv4();
+}
+
+const signToken = (user) =>
+  jwt.sign(
+    { id: user.id, email: user.email, role: user.role || "customer" },
+    process.env.JWT_TOKEN
+  );
 
 const userLogin = async ({ email, pass }) => {
-    const { data, error } = await sdb
+  const { data, error } = await sdb
     .from("User")
-    .select("id, pass")
+    .select("id, pass, role, email")
     .eq("email", email)
     .single();
 
-    if (error) {
-        throw new Error(error.message);
-    };
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Invalid credentials");
 
-    if (!data) {
-        throw new Error("Invalid credentials");
-    };
+  const isPasswordValid = await bcrypt.compare(pass, data.pass);
+  if (!isPasswordValid) throw new Error("Invalid credentials");
 
-    const isPasswordValid = await bcrypt.compare(pass, data.pass)
-    if (!isPasswordValid) {
-        throw new Error("Invalid credentials")
-    };
-
-    const token = jwt.sign({ id: data.id, email: email }, process.env.JWT_TOKEN);
-    return token;
+  return signToken(data);
 };
 
 const userRegistration = async ({ email, pass }) => {
-    // Verify email has been already registered
-    const { data: existingUser, error: fetchError } = await sdb
+  const { data: existingUser, error: fetchError } = await sdb
     .from("User")
     .select("email")
-    .eq("email", email)
+    .eq("email", email);
 
-    if (fetchError) {
-    throw new Error(fetchError.message);
-    }
+  if (fetchError) throw new Error(fetchError.message);
+  if (existingUser.length > 0) throw new Error("Email is already registered");
 
-    if (existingUser.length > 0) {
-    throw new Error("Email is already registered");
-    }
+  const hashedPass = bcrypt.hashSync(pass, 10);
+  const userId = generateUniqueId();
 
-    // password encryption
-    const hashedPass = bcrypt.hashSync(pass, 10);
+  const { error } = await sdb.from("User").insert({
+    id: userId,
+    email,
+    pass: hashedPass,
+    role: "customer",
+    avatar: "https://cdn-icons-png.flaticon.com/512/219/219988.png",
+    name: "Não definido",
+    phone: "Não definido",
+    cep: "Não definido",
+    address: "Não definido"
+  });
 
-    const userId = generateUniqueId();
+  if (error) throw new Error("Failed to register user: " + error.message);
 
-    // Insert the new user into the db
-    const { error } = await sdb
-    .from("User")
-    .insert({
-        id: userId,
-        email: email,
-        pass: hashedPass,
-        avatar: "https://cdn-icons-png.flaticon.com/512/219/219988.png", // default avatar
-        name: "Não definido",
-        phone: "Não definido",
-        cep: "Não definido",
-        address: "Não definido",
-    });
-
-    if (error) {
-    throw new Error("Failed to register user: " + error.message);
-    }
-
-    const token = jwt.sign({ id: userId, email: email }, process.env.JWT_TOKEN);
-    return token;
+  return signToken({ id: userId, email, role: "customer" });
 };
 
 export { userLogin, userRegistration };
