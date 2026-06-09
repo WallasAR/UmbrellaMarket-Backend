@@ -15,6 +15,7 @@ import {
   setOrderStatus,
   setOperationalStatus
 } from "../controllers/pharmacyPanelController.js";
+import { getPharmacyFinancials } from "../services/financialService.js";
 
 const router = express.Router();
 
@@ -31,5 +32,14 @@ router.post("/alerts/scan", scanAlerts);
 router.get("/orders", orders);
 router.patch("/orders/:sessionId/status", setOrderStatus);
 router.patch("/status", setOperationalStatus);
+
+router.get("/financial", async (req, res, next) => {
+  try {
+    const data = await getPharmacyFinancials(req.pharmacyId, req.query.period || "30d");
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default router;

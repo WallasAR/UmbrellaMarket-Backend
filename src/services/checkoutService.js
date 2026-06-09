@@ -12,6 +12,7 @@ import {
   cancelSubscriptionByStripeId,
   markSubscriptionPaymentFailed
 } from "./subscriptionService.js";
+import { recordPurchaseFees } from "./financialService.js";
 
 dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_KEY);
@@ -179,6 +180,11 @@ const updatePurchaseStatus = async (sessionId, status) => {
 const handleSuccessfulPayment = async (sessionId) => {
   const purchaseItems = await getPurchaseData(sessionId);
 
+  const pharmacyIds = [...new Set(purchaseItems.map((item) => item.pharmacy_id).filter(Boolean))];
+  for (const pharmacyId of pharmacyIds) {
+    await recordPurchaseFees(sessionId, pharmacyId);
+  }
+
   for (const item of purchaseItems) {
     const stock = await getMedicineStock(item.medicine_id);
     await updateMedicineStock(item.medicine_id, stock - item.quantity);
@@ -206,7 +212,7 @@ const handleSuccessfulPayment = async (sessionId) => {
 const getPurchaseData = async (sessionId) => {
   const { data, error } = await sdb
     .from("Purchase")
-    .select("user_id, medicine_id, quantity")
+    .select("user_id, medicine_id, quantity, pharmacy_id")
     .eq("id", sessionId);
 
   if (error || !data?.length) {
