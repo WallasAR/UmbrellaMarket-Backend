@@ -7,6 +7,7 @@ import errorMiddleware from './middlewares/errorMiddleware.js';
 import { apiLimiter, webhookLimiter } from './middlewares/rateLimitMiddleware.js';
 import requestLogger from './middlewares/requestLoggerMiddleware.js';
 import path from "path";
+import { fileURLToPath } from "url";
 import setupSwagger from './doc/index.js';
 
 dotenv.config();
@@ -41,6 +42,12 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`Listening on port ${port}`);
-});
+const isDirectRun = process.argv[1] === fileURLToPath(import.meta.url);
+
+if (isDirectRun) {
+  app.listen(port, () => {
+    console.log(`Listening on port ${port}`);
+  });
+}
+
+export default app;
