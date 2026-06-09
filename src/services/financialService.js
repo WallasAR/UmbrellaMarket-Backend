@@ -213,6 +213,7 @@ const buildPlatformFinancialCsv = async (period = "30d") => {
 };
 
 export {
+  escapeCsv,
   getPharmacyFinancials,
   getPlatformFinancials,
   recordPurchaseFees,

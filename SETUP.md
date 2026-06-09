@@ -266,7 +266,7 @@ POST /api/notifications/push-subscribe
 npm test
 ```
 
-Cobertura atual: health, Swagger `/docs`, rate limit headers, notificações VAPID, autenticação (401/403/role), validação Zod e schemas de domínio.
+Cobertura atual: health, Swagger `/docs`, rate limit headers, notificações VAPID (incl. push-subscribe), autenticação (401/403/role), validação Zod, schemas de domínio e formatação CSV financeiro.
 
 Documentação interativa da API: `http://localhost:4000/docs`
 
