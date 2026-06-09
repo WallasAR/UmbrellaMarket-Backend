@@ -12,6 +12,7 @@ import {
   products,
   addProduct,
   editProduct,
+  removeProduct,
   batches,
   addBatch,
   editBatch,
@@ -23,6 +24,7 @@ import {
   setOperationalStatus
 } from "../controllers/pharmacyPanelController.js";
 import { getPharmacyFinancials, buildPharmacyFinancialCsv } from "../services/financialService.js";
+import { getPharmacyMetrics } from "../services/metricsService.js";
 
 const router = express.Router();
 
@@ -35,6 +37,15 @@ router.post("/billing/portal", billingPortal);
 router.get("/products", products);
 router.post("/products", validateBody(productCreateSchema), addProduct);
 router.put("/products/:id", validateBody(productUpdateSchema), editProduct);
+router.delete("/products/:id", removeProduct);
+router.get("/metrics", async (req, res, next) => {
+  try {
+    const data = await getPharmacyMetrics(req.pharmacyId, req.query.period || "30d");
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+});
 router.get("/batches", batches);
 router.post("/batches", validateBody(batchSchema), addBatch);
 router.put("/batches/:id", editBatch);

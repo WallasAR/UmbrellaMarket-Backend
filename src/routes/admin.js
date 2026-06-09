@@ -16,6 +16,7 @@ import {
 } from "../controllers/adminController.js";
 import { pending, approve, reject } from "../controllers/onboardingController.js";
 import { getPlatformFinancials, buildPlatformFinancialCsv } from "../services/financialService.js";
+import { getPlatformMetrics } from "../services/metricsService.js";
 import { validateBody } from "../middlewares/validateMiddleware.js";
 import {
   orderStatusSchema,
@@ -43,6 +44,15 @@ router.post("/pharmacies", addPharmacy);
 router.get("/pharmacies/pending", pending);
 router.patch("/pharmacies/:id/approve", approve);
 router.patch("/pharmacies/:id/reject", validateBody(pharmacyRejectSchema), reject);
+
+router.get("/metrics", async (req, res, next) => {
+  try {
+    const data = await getPlatformMetrics(req.query.period || "30d");
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.get("/financial", async (req, res, next) => {
   try {
