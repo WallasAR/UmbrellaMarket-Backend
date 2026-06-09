@@ -16,12 +16,11 @@ const listReviews = async (req, res, next) => {
 const addReview = async (req, res, next) => {
   try {
     const { medicine_id, rating, comment, pharmacy_id } = req.body;
-    if (!medicine_id || !rating) throw new Error("Review data is required");
 
     const review = await createReview({
       userId: req.user.id,
-      medicineId: Number(medicine_id),
-      rating: Number(rating),
+      medicineId: medicine_id,
+      rating,
       comment,
       pharmacyId: pharmacy_id
     });

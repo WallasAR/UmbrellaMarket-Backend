@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import dotenv from "dotenv";
 import sdb from "./database.js";
 import { getPlanByTier } from "./onboardingService.js";
+import { getPharmacyPlanUsage } from "./planLimitService.js";
 import { createNotification } from "./notificationService.js";
 import { sendEmail } from "./emailService.js";
 
@@ -18,10 +19,12 @@ const getPharmacyBilling = async (pharmacyId) => {
   if (error || !pharmacy) throw new Error("Pharmacy not found");
 
   const plan = await getPlanByTier(pharmacy.plan_tier);
+  const planUsage = await getPharmacyPlanUsage(pharmacyId);
 
   return {
     pharmacy,
     plan,
+    planUsage,
     requiresPayment: Number(plan.monthly_price) > 0
   };
 };

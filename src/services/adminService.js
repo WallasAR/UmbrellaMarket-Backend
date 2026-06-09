@@ -1,7 +1,12 @@
 import sdb from "./database.js";
+import { assertCanAddProduct } from "./planLimitService.js";
 
 const createProduct = async (payload) => {
   const { images, ...medicine } = payload;
+
+  if (medicine.pharmacy_id) {
+    await assertCanAddProduct(medicine.pharmacy_id);
+  }
 
   const { data, error } = await sdb
     .from("Medicine")

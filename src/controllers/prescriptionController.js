@@ -11,11 +11,10 @@ import { sendEmail } from "../services/emailService.js";
 const createPrescription = async (req, res, next) => {
   try {
     const { medicine_id, file_name, file_data } = req.body;
-    if (!medicine_id || !file_data) throw new Error("Prescription data is required");
 
     const prescription = await uploadPrescription({
       userId: req.user.id,
-      medicineId: Number(medicine_id),
+      medicineId: medicine_id,
       fileName: file_name,
       fileData: file_data
     });

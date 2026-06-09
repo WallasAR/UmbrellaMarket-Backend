@@ -5,18 +5,6 @@ import {
   deleteProductFromCart,
 } from "../services/cartService.js"
 
-// Util for validation of cart input
-const validateCartInput = (userId, medicine_id, quantity) => {
-  if (!userId || !medicine_id || quantity === undefined) {
-    throw new Error("User, product and quantity must be specified");
-  }
-
-  if (typeof medicine_id !== "number" || typeof quantity !== "number") {
-    throw new Error("Product identifier and quantity must be integers");
-  }
-};
-
-
 const listCart = async (req, res, next) => {
   try {
     const userId = req.user.id;
@@ -36,8 +24,6 @@ const addToCart = async (req, res, next) => {
     const userId = req.user.id;
     const { medicine_id, quantity } = req.body;
 
-    validateCartInput(userId, medicine_id, quantity); 
-
     await addProductToCart(userId, medicine_id, quantity);
 
     res.status(201).json({message: "Product added successfully"});
@@ -50,8 +36,6 @@ const updateCart = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { medicine_id, quantity } = req.body;
-
-    validateCartInput(userId, medicine_id, quantity); 
 
     await updateCartProducts(userId, medicine_id, quantity);
 

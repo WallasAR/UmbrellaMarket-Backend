@@ -16,25 +16,33 @@ import {
 } from "../controllers/adminController.js";
 import { pending, approve, reject } from "../controllers/onboardingController.js";
 import { getPlatformFinancials } from "../services/financialService.js";
+import { validateBody } from "../middlewares/validateMiddleware.js";
+import {
+  orderStatusSchema,
+  roleUpdateSchema,
+  pharmacyRejectSchema,
+  couponCreateSchema,
+  productCreateSchema
+} from "../schemas/index.js";
 
 const router = express.Router();
 
 router.use(autenticateToken, requireRole("admin", "operator"));
 
 router.get("/dashboard", dashboard);
-router.post("/products", createMedicine);
+router.post("/products", validateBody(productCreateSchema), createMedicine);
 router.put("/products/:id", updateMedicine);
 router.delete("/products/:id", removeMedicine);
 router.get("/users", users);
-router.patch("/users/:id/role", setUserRole);
+router.patch("/users/:id/role", validateBody(roleUpdateSchema), setUserRole);
 router.get("/orders", orders);
-router.patch("/orders/:sessionId/status", setOrderStatus);
+router.patch("/orders/:sessionId/status", validateBody(orderStatusSchema), setOrderStatus);
 router.get("/coupons", coupons);
-router.post("/coupons", addCoupon);
+router.post("/coupons", validateBody(couponCreateSchema), addCoupon);
 router.post("/pharmacies", addPharmacy);
 router.get("/pharmacies/pending", pending);
 router.patch("/pharmacies/:id/approve", approve);
-router.patch("/pharmacies/:id/reject", reject);
+router.patch("/pharmacies/:id/reject", validateBody(pharmacyRejectSchema), reject);
 
 router.get("/financial", async (req, res, next) => {
   try {
