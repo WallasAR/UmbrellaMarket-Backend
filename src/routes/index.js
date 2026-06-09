@@ -14,6 +14,7 @@ import adminRoutes from "./admin.js";
 import reviewRoutes from "./reviews.js";
 import subscriptionRoutes from "./subscriptions.js";
 import pharmacyPanelRoutes from "./pharmacy-panel.js";
+import onboardingRoutes from "./onboarding.js";
 
 const router = express.Router();
 
@@ -31,5 +32,6 @@ router.use("/admin", adminRoutes);
 router.use("/reviews", reviewRoutes);
 router.use("/subscriptions", subscriptionRoutes);
 router.use("/pharmacy", pharmacyPanelRoutes);
+router.use("/onboarding", onboardingRoutes);
 
 export default router;
