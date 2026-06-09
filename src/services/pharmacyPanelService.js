@@ -1,6 +1,7 @@
 import sdb from "./database.js";
 import { createNotification } from "./notificationService.js";
 import { sendEmail } from "./emailService.js";
+import { sendWhatsApp } from "./whatsappService.js";
 
 const LOW_STOCK_THRESHOLD = 10;
 const EXPIRY_WARNING_DAYS = 30;
@@ -150,13 +151,16 @@ const getAlerts = async (pharmacyId) => {
 const notifyPharmacyStaff = async (pharmacyId, title, message) => {
   const { data: staff } = await sdb
     .from("User")
-    .select("id, email")
+    .select("id, email, phone")
     .eq("pharmacy_id", pharmacyId)
     .in("role", ["pharmacist", "operator", "admin"]);
 
   for (const user of staff || []) {
     await createNotification({ user_id: user.id, title, message, type: "alert" });
     await sendEmail({ to: user.email, subject: title, text: message });
+    if (user.phone && user.phone !== "Não definido") {
+      await sendWhatsApp({ to: user.phone, message: `${title}: ${message}` });
+    }
   }
 };
 
