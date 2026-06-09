@@ -1,4 +1,5 @@
 import sdb from "./database.js";
+import { sendPushToUser } from "./pushService.js";
 
 const listNotifications = async (userId) => {
   const { data, error } = await sdb
@@ -19,6 +20,8 @@ const createNotification = async ({ user_id, title, message, type = "info" }) =>
     .single();
 
   if (error) throw new Error(error.message);
+
+  await sendPushToUser(user_id, { title, message });
   return data;
 };
 

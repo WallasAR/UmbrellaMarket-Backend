@@ -121,6 +121,14 @@ const productCreateSchema = z.object({
 
 const productUpdateSchema = productCreateSchema.partial();
 
+const pushSubscriptionSchema = z.object({
+  endpoint: z.string().url(),
+  keys: z.object({
+    p256dh: z.string().min(1),
+    auth: z.string().min(1)
+  })
+});
+
 export {
   loginSchema,
   registerSchema,
@@ -141,5 +149,6 @@ export {
   pharmacyRejectSchema,
   couponCreateSchema,
   productCreateSchema,
-  productUpdateSchema
+  productUpdateSchema,
+  pushSubscriptionSchema
 };
