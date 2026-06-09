@@ -13,6 +13,11 @@ import {
   markSubscriptionPaymentFailed
 } from "./subscriptionService.js";
 import { recordPurchaseFees } from "./financialService.js";
+import {
+  activatePharmacyBillingFromCheckout,
+  cancelPharmacyBillingByStripeId,
+  markPharmacyBillingPastDue
+} from "./billingService.js";
 
 dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_KEY);
@@ -257,12 +262,16 @@ const handleStripeWebhook = async (rawBody, signature) => {
     const session = event.data.object;
 
     if (session.mode === "subscription" && session.subscription) {
-      await activateSubscription({
-        userId: session.metadata.user_id,
-        medicineId: Number(session.metadata.medicine_id),
-        quantity: Number(session.metadata.quantity || 1),
-        stripeSubscriptionId: session.subscription
-      });
+      if (session.metadata?.type === "pharmacy_plan") {
+        await activatePharmacyBillingFromCheckout(session);
+      } else {
+        await activateSubscription({
+          userId: session.metadata.user_id,
+          medicineId: Number(session.metadata.medicine_id),
+          quantity: Number(session.metadata.quantity || 1),
+          stripeSubscriptionId: session.subscription
+        });
+      }
     } else {
       await updatePaymentStatus(session.id);
     }
@@ -273,12 +282,17 @@ const handleStripeWebhook = async (rawBody, signature) => {
   }
 
   if (event.type === "customer.subscription.deleted") {
-    await cancelSubscriptionByStripeId(event.data.object.id);
+    const subscriptionId = event.data.object.id;
+    const handled = await cancelPharmacyBillingByStripeId(subscriptionId);
+    if (!handled) await cancelSubscriptionByStripeId(subscriptionId);
   }
 
   if (event.type === "invoice.payment_failed") {
     const subscriptionId = event.data.object.subscription;
-    if (subscriptionId) await markSubscriptionPaymentFailed(subscriptionId);
+    if (subscriptionId) {
+      const handled = await markPharmacyBillingPastDue(subscriptionId);
+      if (!handled) await markSubscriptionPaymentFailed(subscriptionId);
+    }
   }
 
   await markEventProcessed(event.id, event.type);

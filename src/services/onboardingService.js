@@ -125,14 +125,20 @@ const listPendingPharmacies = async () => {
 };
 
 const approvePharmacy = async (pharmacyId) => {
+  const { data: current } = await sdb.from("Pharmacy").select("plan_tier").eq("id", pharmacyId).single();
+  const plan = await getPlanByTier(current?.plan_tier || "free");
+  const billingStatus = Number(plan.monthly_price) > 0 ? "pending_payment" : "active";
+
   const { data, error } = await sdb
     .from("Pharmacy")
     .update({
       onboarding_status: "approved",
-      active: true,
-      operational_status: "open",
+      active: billingStatus === "active",
+      operational_status: billingStatus === "active" ? "open" : "closed",
       approved_at: new Date().toISOString(),
-      rejected_reason: null
+      rejected_reason: null,
+      billing_status: billingStatus,
+      plan_started_at: billingStatus === "active" ? new Date().toISOString() : null
     })
     .eq("id", pharmacyId)
     .select()
@@ -142,17 +148,20 @@ const approvePharmacy = async (pharmacyId) => {
 
   if (data.owner_user_id) {
     const { data: owner } = await sdb.from("User").select("email").eq("id", data.owner_user_id).single();
+    const billingNote = billingStatus === "pending_payment"
+      ? " Ative o plano pago no painel da farmácia para começar a vender."
+      : "";
 
     await createNotification({
       user_id: data.owner_user_id,
       title: "Farmácia aprovada",
-      message: `Sua farmácia ${data.name} foi aprovada e já está ativa.`,
+      message: `Sua farmácia ${data.name} foi aprovada.${billingNote}`,
       type: "info"
     });
     await sendEmail({
       to: owner?.email,
       subject: "Farmácia aprovada - Umbrella",
-      text: `Parabéns! Sua farmácia ${data.name} foi aprovada.`
+      text: `Parabéns! Sua farmácia ${data.name} foi aprovada.${billingNote}`
     });
   }
 
@@ -188,6 +197,7 @@ const rejectPharmacy = async (pharmacyId, reason) => {
 
 export {
   listPlans,
+  getPlanByTier,
   getUserOnboardingStatus,
   registerPharmacy,
   listPendingPharmacies,

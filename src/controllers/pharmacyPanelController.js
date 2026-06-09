@@ -1,4 +1,10 @@
 import {
+  getPharmacyBilling,
+  createPlanCheckout,
+  createBillingPortal
+} from "../services/billingService.js";
+import sdb from "../services/database.js";
+import {
   getDashboard,
   listProducts,
   listBatches,
@@ -111,7 +117,38 @@ const setOperationalStatus = async (req, res, next) => {
   }
 };
 
+const billing = async (req, res, next) => {
+  try {
+    const data = await getPharmacyBilling(req.pharmacyId);
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const billingCheckout = async (req, res, next) => {
+  try {
+    const { data: user } = await sdb.from("User").select("email").eq("id", req.user.id).single();
+    const data = await createPlanCheckout(req.pharmacyId, req.body.plan_tier, user?.email);
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const billingPortal = async (req, res, next) => {
+  try {
+    const url = await createBillingPortal(req.pharmacyId);
+    res.status(200).json({ url });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
+  billing,
+  billingCheckout,
+  billingPortal,
   dashboard,
   products,
   batches,
