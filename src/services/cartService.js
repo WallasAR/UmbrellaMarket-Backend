@@ -3,7 +3,19 @@ import sdb from "./database.js";
 const getCart = async (userId) => {
   const { data, error } = await sdb
     .from("Cart")
-    .select("*")
+    .select(`
+      medicine_id,
+      quantity,
+      Medicine (
+        id,
+        name,
+        price,
+        discount,
+        stock,
+        description,
+        Images (thumb_img)
+      )
+    `)
     .eq("user_id", userId);
 
   if (error) {
