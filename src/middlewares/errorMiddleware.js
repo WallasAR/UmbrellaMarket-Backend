@@ -12,6 +12,14 @@ const errorMiddleware = (err, req, res, next) => {
     "Profile data is required": { statusCode: 404, message: "Profile data is required" },
     "Product not found in the cart": { statusCode: 404, message: "Product not found in the cart" },
     "Database error occurred": { statusCode: 503, message: "Database error occurred" },
+    "Order not found": { statusCode: 404, message: "Order not found" },
+    "Invalid coupon": { statusCode: 400, message: "Invalid coupon" },
+    "Coupon expired": { statusCode: 400, message: "Coupon expired" },
+    "Coupon usage limit reached": { statusCode: 400, message: "Coupon usage limit reached" },
+    "Order value below coupon minimum": { statusCode: 400, message: "Order value below coupon minimum" },
+    "Prescription data is required": { statusCode: 400, message: "Prescription data is required" },
+    "Pharmacy not found": { statusCode: 404, message: "Pharmacy not found" },
+    "Access denied": { statusCode: 403, message: "Access denied" },
   };
 
   // Get the error from the map or fallback to default
