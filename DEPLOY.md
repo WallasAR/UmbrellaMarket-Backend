@@ -4,7 +4,7 @@ Guia para publicar a API em produção (Render, Railway, VPS ou similar).
 
 ## Pré-requisitos
 
-1. Rodar todas as migrations (`001` a `005`) no Supabase SQL Editor.
+1. Rodar todas as migrations (`001` a `006`) no Supabase SQL Editor.
 2. Conta Stripe em modo live (ou test) com webhook configurado.
 3. Domínio do frontend definido para `SUCCESS_URL`, `CANCEL_URL` e `PHARMACY_PANEL_URL`.
 
@@ -32,6 +32,10 @@ SMTP_PASS=...
 
 WHATSAPP_API_URL=...   # opcional
 WHATSAPP_API_TOKEN=... # opcional
+
+VAPID_PUBLIC_KEY=...   # opcional — push no navegador
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:admin@seudominio.com
 ```
 
 ## Render (Web Service)
@@ -69,3 +73,11 @@ GET https://sua-api.onrender.com/health
 ## Logs
 
 Cada requisição gera log JSON estruturado no stdout com `requestId`, `durationMs` e `status`. Use o painel do provedor ou um agregador (Datadog, Logtail, etc.) para consulta.
+
+## Testes de API (CI)
+
+```bash
+npm test
+```
+
+O pipeline valida `/health`, `/` e endpoints públicos de notificações sem banco real (variáveis dummy no workflow).

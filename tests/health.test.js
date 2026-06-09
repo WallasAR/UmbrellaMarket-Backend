@@ -1,15 +1,12 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import request from "supertest";
+import { loadTestApp } from "./helpers.js";
 
 let app;
 
 before(async () => {
-  process.env.SUPABASE_URL = process.env.SUPABASE_URL || "https://example.supabase.co";
-  process.env.SUPABASE_API_KEY = process.env.SUPABASE_API_KEY || "test-key";
-  process.env.JWT_TOKEN = process.env.JWT_TOKEN || "test-secret";
-  process.env.STRIPE_KEY = process.env.STRIPE_KEY || "sk_test_dummy";
-  app = (await import("../src/app.js")).default;
+  app = await loadTestApp();
 });
 
 test("GET /health returns ok", async () => {

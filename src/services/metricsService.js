@@ -9,6 +9,29 @@ const uniqueSessions = (rows, statusFilter = null) => {
   return sessions.size;
 };
 
+const groupConversionByDay = (rows) => {
+  const days = {};
+
+  for (const row of rows || []) {
+    const day = (row.created_at || "").slice(0, 10);
+    if (!day) continue;
+    if (!days[day]) days[day] = { date: day, sessions: new Set(), paid: new Set() };
+    days[day].sessions.add(row.id);
+    if (row.payment_status === "paid") days[day].paid.add(row.id);
+  }
+
+  return Object.values(days)
+    .map((entry) => ({
+      date: entry.date,
+      checkoutSessions: entry.sessions.size,
+      paidSessions: entry.paid.size,
+      conversionRate: entry.sessions.size > 0
+        ? Number(((entry.paid.size / entry.sessions.size) * 100).toFixed(1))
+        : 0
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+};
+
 const getPlatformMetrics = async (period = "30d") => {
   const days = period === "7d" ? 7 : period === "90d" ? 90 : 30;
   const start = new Date();
@@ -42,7 +65,8 @@ const getPlatformMetrics = async (period = "30d") => {
     abandonedCarts: carts.count || 0,
     totalUsers: users.count || 0,
     paidRevenue,
-    activeSubscriptions
+    activeSubscriptions,
+    dailyConversion: groupConversionByDay(purchaseRows)
   };
 };
 
@@ -78,7 +102,8 @@ const getPharmacyMetrics = async (pharmacyId, period = "30d") => {
     checkoutSessions,
     paidSessions,
     conversionRate,
-    paidRevenue
+    paidRevenue,
+    dailyConversion: groupConversionByDay(purchaseRows)
   };
 };
 
