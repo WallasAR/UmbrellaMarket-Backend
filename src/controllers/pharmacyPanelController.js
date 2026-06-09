@@ -9,6 +9,7 @@ import {
   listProducts,
   createProduct,
   updateProduct,
+  deleteProduct,
   listBatches,
   createBatch,
   updateBatch,
@@ -51,6 +52,15 @@ const editProduct = async (req, res, next) => {
   try {
     const data = await updateProduct(req.pharmacyId, Number(req.params.id), req.body);
     res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const removeProduct = async (req, res, next) => {
+  try {
+    await deleteProduct(req.pharmacyId, Number(req.params.id));
+    res.status(200).json({ message: "Product removed" });
   } catch (error) {
     next(error);
   }
@@ -173,6 +183,7 @@ export {
   products,
   addProduct,
   editProduct,
+  removeProduct,
   batches,
   addBatch,
   editBatch,

@@ -90,6 +90,28 @@ const createProduct = async (pharmacyId, payload) => {
   return data;
 };
 
+const deleteProduct = async (pharmacyId, productId) => {
+  const { data, error } = await sdb
+    .from("Medicine")
+    .select("id")
+    .eq("id", productId)
+    .eq("pharmacy_id", pharmacyId)
+    .single();
+
+  if (error || !data) throw new Error("Product not found");
+
+  await sdb.from("Images").delete().eq("medicine_id", productId);
+  await sdb.from("MedicineBatch").delete().eq("medicine_id", productId).eq("pharmacy_id", pharmacyId);
+
+  const { error: deleteError } = await sdb
+    .from("Medicine")
+    .delete()
+    .eq("id", productId)
+    .eq("pharmacy_id", pharmacyId);
+
+  if (deleteError) throw new Error(deleteError.message);
+};
+
 const updateProduct = async (pharmacyId, productId, payload) => {
   const { images, ...medicine } = payload;
 
@@ -294,6 +316,7 @@ export {
   listProducts,
   createProduct,
   updateProduct,
+  deleteProduct,
   listBatches,
   createBatch,
   updateBatch,
