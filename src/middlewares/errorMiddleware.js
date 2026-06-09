@@ -22,8 +22,12 @@ const errorMiddleware = (err, req, res, next) => {
     "Access denied": { statusCode: 403, message: "Access denied" },
   };
 
+  if (err.status) {
+    return res.status(err.status).json({ message: err.message });
+  }
+
   // Get the error from the map or fallback to default
-  const errorResponse = errorMap[err.message] || { statusCode: 500, message: "Internal Server Error" };
+  const errorResponse = errorMap[err.message] || { statusCode: 500, message: err.message || "Internal Server Error" };
 
   // Log the error
   console.error(`[ERROR] ${err.stack || err.message}`);

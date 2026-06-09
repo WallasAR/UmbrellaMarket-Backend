@@ -6,8 +6,6 @@ import {
   approvePharmacy,
   rejectPharmacy
 } from "../services/onboardingService.js";
-import { requireFields } from "../utils/validate.js";
-
 const plans = async (req, res, next) => {
   try {
     const data = await listPlans();
@@ -28,7 +26,6 @@ const status = async (req, res, next) => {
 
 const register = async (req, res, next) => {
   try {
-    requireFields(req.body, ["name", "cnpj", "address", "city", "state", "cep", "phone"]);
     const pharmacy = await registerPharmacy(req.user.id, req.body);
     res.status(201).json(pharmacy);
   } catch (error) {
