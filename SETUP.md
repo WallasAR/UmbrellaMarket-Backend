@@ -252,6 +252,9 @@ GET  /api/pharmacy/financial/export
 
 GET  /api/admin/financial/export
 GET  /health
+GET  /api/admin/metrics
+GET  /api/pharmacy/metrics
+DELETE /api/pharmacy/products/:id
 ```
 
 ## Segurança
@@ -260,6 +263,8 @@ GET  /health
 - Rate limiting reforçado em `/api/auth` (30 req / 15 min).
 - Validação de payload com Zod em rotas críticas (auth, cart, checkout, reviews, prescriptions, coupons, perfil, admin).
 - Limite de produtos por plano SaaS (`max_products`) aplicado ao cadastrar medicamentos com `pharmacy_id`.
+
+Para deploy em produção, consulte também [DEPLOY.md](./DEPLOY.md).
 
 ## Observações de produção
 
