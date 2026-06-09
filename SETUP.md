@@ -252,7 +252,8 @@ POST /api/pharmacy/billing/portal
 
 - Rate limiting global em `/api` (300 req / 15 min).
 - Rate limiting reforçado em `/api/auth` (30 req / 15 min).
-- Validação de payload com Zod em rotas críticas (auth, onboarding, lotes, status).
+- Validação de payload com Zod em rotas críticas (auth, cart, checkout, reviews, prescriptions, coupons, perfil, admin).
+- Limite de produtos por plano SaaS (`max_products`) aplicado ao cadastrar medicamentos com `pharmacy_id`.
 
 ## Observações de produção
 
