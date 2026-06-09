@@ -31,7 +31,7 @@ JWT_TOKEN=uma_chave_segura
 STRIPE_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 SUCCESS_URL=http://localhost:4200/checkout/success
-CANCEL_URL=http://localhost:4200/cart
+CANCEL_URL=http://localhost:4200/checkout/cancel
 
 SMTP_HOST=smtp.seudominio.com
 SMTP_PORT=587
@@ -50,6 +50,7 @@ Execute as migrations em ordem no Supabase SQL Editor:
 ```text
 migrations/001_marketplace_saas_extensions.sql
 migrations/002_reviews_subscriptions_webhooks.sql
+migrations/003_pharmacy_operations.sql
 ```
 
 Essas migrations adicionam:
@@ -63,6 +64,9 @@ Essas migrations adicionam:
 - Avaliações
 - Assinaturas
 - Controle de eventos de webhook
+- Vínculo de usuário com farmácia (`User.pharmacy_id`)
+- Lotes com validade (`MedicineBatch`)
+- Status operacional e plano da farmácia
 
 ## Rodando localmente
 
@@ -90,7 +94,7 @@ Configure:
 
 ```env
 SUCCESS_URL=http://localhost:4200/checkout/success
-CANCEL_URL=http://localhost:4200/cart
+CANCEL_URL=http://localhost:4200/checkout/cancel
 ```
 
 ### Webhook
@@ -106,6 +110,8 @@ Eventos recomendados:
 ```text
 checkout.session.completed
 checkout.session.async_payment_failed
+customer.subscription.deleted
+invoice.payment_failed
 ```
 
 Copie o signing secret para:
@@ -132,6 +138,17 @@ UPDATE "User"
 SET role = 'admin'
 WHERE email = 'seu-email@dominio.com';
 ```
+
+Para liberar o painel da farmácia, vincule o usuário a uma farmácia:
+
+```sql
+UPDATE "User"
+SET role = 'pharmacist', pharmacy_id = 'uuid-da-farmacia'
+WHERE email = 'farmaceutico@dominio.com';
+```
+
+Roles `pharmacist` e `operator` precisam de `pharmacy_id` para acessar `/api/pharmacy/*`.
+Admins podem informar `x-pharmacy-id` no header para operar uma farmácia específica.
 
 ## Produtos
 
@@ -193,6 +210,18 @@ GET  /api/admin/orders
 PATCH /api/admin/orders/:sessionId/status
 GET  /api/admin/users
 PATCH /api/admin/users/:id/role
+
+GET  /api/pharmacy/dashboard
+GET  /api/pharmacy/products
+GET  /api/pharmacy/batches
+POST /api/pharmacy/batches
+PUT  /api/pharmacy/batches/:id
+DELETE /api/pharmacy/batches/:id
+GET  /api/pharmacy/alerts
+POST /api/pharmacy/alerts/scan
+GET  /api/pharmacy/orders
+PATCH /api/pharmacy/orders/:sessionId/status
+PATCH /api/pharmacy/status
 ```
 
 ## Observações de produção
