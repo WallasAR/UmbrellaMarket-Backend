@@ -4,7 +4,9 @@ import {
   loginSchema,
   orderStatusSchema,
   pushSubscriptionSchema,
-  productCreateSchema
+  productCreateSchema,
+  couponValidateSchema,
+  prescriptionSchema
 } from "../src/schemas/index.js";
 
 test("loginSchema accepts valid credentials", () => {
@@ -45,6 +47,24 @@ test("pushSubscriptionSchema requires endpoint and keys", () => {
     keys: { p256dh: "key", auth: "auth" }
   });
   const invalid = pushSubscriptionSchema.safeParse({ endpoint: "not-a-url" });
+
+  assert.equal(valid.success, true);
+  assert.equal(invalid.success, false);
+});
+
+test("couponValidateSchema accepts code and coerces subtotal", () => {
+  const result = couponValidateSchema.safeParse({ code: "UMBRELLA10", subtotal: "99.5" });
+
+  assert.equal(result.success, true);
+  assert.equal(result.data.subtotal, 99.5);
+});
+
+test("prescriptionSchema requires medicine_id and file_data", () => {
+  const valid = prescriptionSchema.safeParse({
+    medicine_id: 1,
+    file_data: "base64encodedcontenthere123456"
+  });
+  const invalid = prescriptionSchema.safeParse({ medicine_id: 1, file_data: "short" });
 
   assert.equal(valid.success, true);
   assert.equal(invalid.success, false);
