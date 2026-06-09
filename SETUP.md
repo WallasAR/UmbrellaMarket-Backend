@@ -268,7 +268,7 @@ npm test
 
 Cobertura atual: health, Swagger `/docs`, rate limit headers, notificações VAPID (incl. push-subscribe), cupons, assinaturas, autenticação (401/403/role), validação Zod, schemas de domínio e formatação CSV financeiro.
 
-Swagger documenta também subscriptions, coupons e prescriptions em `/docs`.
+Swagger documenta também subscriptions, coupons, prescriptions, onboarding e webhooks em `/docs`.
 
 Documentação interativa da API: `http://localhost:4000/docs`
 
