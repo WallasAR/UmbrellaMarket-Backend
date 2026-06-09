@@ -15,7 +15,7 @@ import {
   addPharmacy
 } from "../controllers/adminController.js";
 import { pending, approve, reject } from "../controllers/onboardingController.js";
-import { getPlatformFinancials } from "../services/financialService.js";
+import { getPlatformFinancials, buildPlatformFinancialCsv } from "../services/financialService.js";
 import { validateBody } from "../middlewares/validateMiddleware.js";
 import {
   orderStatusSchema,
@@ -48,6 +48,18 @@ router.get("/financial", async (req, res, next) => {
   try {
     const data = await getPlatformFinancials(req.query.period || "30d");
     res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/financial/export", async (req, res, next) => {
+  try {
+    const period = req.query.period || "30d";
+    const csv = await buildPlatformFinancialCsv(period);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="plataforma-${period}.csv"`);
+    res.status(200).send(csv);
   } catch (error) {
     next(error);
   }

@@ -166,4 +166,56 @@ const recordPurchaseFees = async (sessionId, pharmacyId) => {
   }
 };
 
-export { getPharmacyFinancials, getPlatformFinancials, recordPurchaseFees };
+const escapeCsv = (value) => {
+  const text = String(value ?? "");
+  if (text.includes(",") || text.includes('"') || text.includes("\n")) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+};
+
+const buildPharmacyFinancialCsv = async (pharmacyId, period = "30d") => {
+  const report = await getPharmacyFinancials(pharmacyId, period);
+  const lines = [
+    ["Farmácia", report.pharmacy, "Período", report.period].map(escapeCsv).join(","),
+    ["Receita bruta", report.summary.grossRevenue, "Comissão", report.summary.platformFee, "Líquido", report.summary.netRevenue].map(escapeCsv).join(","),
+    "",
+    ["Data", "Receita", "Pedidos"].map(escapeCsv).join(",")
+  ];
+
+  for (const day of report.daily) {
+    lines.push([day.date, day.revenue, day.orders].map(escapeCsv).join(","));
+  }
+
+  return lines.join("\n");
+};
+
+const buildPlatformFinancialCsv = async (period = "30d") => {
+  const report = await getPlatformFinancials(period);
+  const lines = [
+    ["Relatório plataforma", "Período", report.period].map(escapeCsv).join(","),
+    ["GMV", report.summary.grossRevenue, "Comissões", report.summary.platformFee, "Pedidos", report.summary.orderCount].map(escapeCsv).join(","),
+    "",
+    ["Farmácia", "Receita bruta", "Comissão", "Líquido", "Pedidos"].map(escapeCsv).join(",")
+  ];
+
+  for (const pharmacy of report.pharmacies) {
+    lines.push([
+      pharmacy.pharmacyName,
+      pharmacy.grossRevenue,
+      pharmacy.platformFee,
+      pharmacy.netRevenue,
+      pharmacy.orderCount
+    ].map(escapeCsv).join(","));
+  }
+
+  return lines.join("\n");
+};
+
+export {
+  getPharmacyFinancials,
+  getPlatformFinancials,
+  recordPurchaseFees,
+  buildPharmacyFinancialCsv,
+  buildPlatformFinancialCsv
+};
