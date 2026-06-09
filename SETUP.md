@@ -260,6 +260,14 @@ GET  /api/notifications/vapid-public-key
 POST /api/notifications/push-subscribe
 ```
 
+## Testes de API
+
+```bash
+npm test
+```
+
+Cobertura atual: health, notificações VAPID, autenticação (401/403), validação Zod e schemas de domínio.
+
 Gere chaves VAPID para push (opcional):
 
 ```bash

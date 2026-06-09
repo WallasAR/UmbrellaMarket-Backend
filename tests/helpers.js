@@ -1,3 +1,5 @@
+import jwt from "jsonwebtoken";
+
 export const loadTestApp = async () => {
   process.env.SUPABASE_URL = process.env.SUPABASE_URL || "https://example.supabase.co";
   process.env.SUPABASE_API_KEY = process.env.SUPABASE_API_KEY || "test-key";
@@ -7,3 +9,14 @@ export const loadTestApp = async () => {
   const { default: app } = await import("../src/app.js");
   return app;
 };
+
+export const signTestToken = (overrides = {}) =>
+  jwt.sign(
+    {
+      id: "test-user-id",
+      email: "test@example.com",
+      role: "customer",
+      ...overrides
+    },
+    process.env.JWT_TOKEN
+  );
