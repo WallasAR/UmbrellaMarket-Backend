@@ -246,6 +246,12 @@ GET  /api/admin/financial
 GET  /api/pharmacy/billing
 POST /api/pharmacy/billing/checkout
 POST /api/pharmacy/billing/portal
+POST /api/pharmacy/products
+PUT  /api/pharmacy/products/:id
+GET  /api/pharmacy/financial/export
+
+GET  /api/admin/financial/export
+GET  /health
 ```
 
 ## Segurança
