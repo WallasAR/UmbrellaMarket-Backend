@@ -43,3 +43,13 @@ test("POST /api/auth/login with invalid body returns 400", async () => {
   assert.equal(response.status, 400);
   assert.ok(response.body.message);
 });
+
+test("GET /api/admin/dashboard with customer role returns 403", async () => {
+  const token = signTestToken({ role: "customer" });
+  const response = await request(app)
+    .get("/api/admin/dashboard")
+    .set("Authorization", token);
+
+  assert.equal(response.status, 403);
+  assert.equal(response.body.message, "Access denied");
+});
