@@ -2,6 +2,7 @@ import sdb from "./database.js";
 import { createNotification } from "./notificationService.js";
 import { sendEmail } from "./emailService.js";
 import { sendWhatsApp } from "./whatsappService.js";
+import { assertCanAddProduct } from "./planLimitService.js";
 
 const LOW_STOCK_THRESHOLD = 10;
 const EXPIRY_WARNING_DAYS = 30;
@@ -58,12 +59,55 @@ const getDashboard = async (pharmacyId) => {
 const listProducts = async (pharmacyId) => {
   const { data, error } = await sdb
     .from("Medicine")
-    .select("id, name, price, discount, stock, category, requires_prescription, allows_subscription")
+    .select("id, name, price, discount, stock, category, requires_prescription, allows_subscription, description, active_ingredient, laboratory")
     .eq("pharmacy_id", pharmacyId)
     .order("name");
 
   if (error) throw new Error(error.message);
   return data || [];
+};
+
+const createProduct = async (pharmacyId, payload) => {
+  await assertCanAddProduct(pharmacyId);
+
+  const { images, ...medicine } = payload;
+  const insertData = { ...medicine, pharmacy_id: pharmacyId, stock: medicine.stock ?? 0 };
+
+  const { data, error } = await sdb
+    .from("Medicine")
+    .insert(insertData)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  const imagePayload = images || {
+    thumb_img: "/defaultmed.png",
+    primary_img: "/defaultmed.png"
+  };
+
+  await sdb.from("Images").insert({ ...imagePayload, medicine_id: data.id });
+  return data;
+};
+
+const updateProduct = async (pharmacyId, productId, payload) => {
+  const { images, ...medicine } = payload;
+
+  const { data, error } = await sdb
+    .from("Medicine")
+    .update(medicine)
+    .eq("id", productId)
+    .eq("pharmacy_id", pharmacyId)
+    .select()
+    .single();
+
+  if (error || !data) throw new Error("Product not found");
+
+  if (images) {
+    await sdb.from("Images").update(images).eq("medicine_id", productId);
+  }
+
+  return data;
 };
 
 const listBatches = async (pharmacyId) => {
@@ -248,6 +292,8 @@ const runAlertScan = async (pharmacyId) => {
 export {
   getDashboard,
   listProducts,
+  createProduct,
+  updateProduct,
   listBatches,
   createBatch,
   updateBatch,

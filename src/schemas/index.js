@@ -119,6 +119,8 @@ const productCreateSchema = z.object({
   }).optional()
 });
 
+const productUpdateSchema = productCreateSchema.partial();
+
 export {
   loginSchema,
   registerSchema,
@@ -138,5 +140,6 @@ export {
   roleUpdateSchema,
   pharmacyRejectSchema,
   couponCreateSchema,
-  productCreateSchema
+  productCreateSchema,
+  productUpdateSchema
 };

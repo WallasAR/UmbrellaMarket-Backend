@@ -7,6 +7,8 @@ import sdb from "../services/database.js";
 import {
   getDashboard,
   listProducts,
+  createProduct,
+  updateProduct,
   listBatches,
   createBatch,
   updateBatch,
@@ -30,6 +32,24 @@ const dashboard = async (req, res, next) => {
 const products = async (req, res, next) => {
   try {
     const data = await listProducts(req.pharmacyId);
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const addProduct = async (req, res, next) => {
+  try {
+    const data = await createProduct(req.pharmacyId, req.body);
+    res.status(201).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const editProduct = async (req, res, next) => {
+  try {
+    const data = await updateProduct(req.pharmacyId, Number(req.params.id), req.body);
     res.status(200).json(data);
   } catch (error) {
     next(error);
@@ -151,6 +171,8 @@ export {
   billingPortal,
   dashboard,
   products,
+  addProduct,
+  editProduct,
   batches,
   addBatch,
   editBatch,
