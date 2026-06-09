@@ -13,6 +13,7 @@ import notificationRoutes from "./notifications.js";
 import adminRoutes from "./admin.js";
 import reviewRoutes from "./reviews.js";
 import subscriptionRoutes from "./subscriptions.js";
+import pharmacyPanelRoutes from "./pharmacy-panel.js";
 
 const router = express.Router();
 
@@ -29,5 +30,6 @@ router.use("/notifications", notificationRoutes);
 router.use("/admin", adminRoutes);
 router.use("/reviews", reviewRoutes);
 router.use("/subscriptions", subscriptionRoutes);
+router.use("/pharmacy", pharmacyPanelRoutes);
 
 export default router;
