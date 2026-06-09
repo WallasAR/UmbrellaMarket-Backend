@@ -6,7 +6,7 @@ const options = {
     openapi: "3.0.0",
     info: {
       title: "Umbrella Marketplace API",
-      version: "1.5.0",
+      version: "2.0.0",
       description: `
 ### Welcome to the Umbrella Corporation API documentation!  
 The purpose of this documentation is to provide detailed information about the system's endpoints, functionalities, and operational logic. This API supports various e-commerce operations such as product management, inventory control, payment processing, and more.
@@ -31,7 +31,7 @@ Get Started:
         description: "Render Environment"
       },
       {
-        url: `http://localhost:999/api`, // URL for local dev tests
+        url: `http://localhost:4000/api`,
         description: "Development Environment"
       }
     ],
