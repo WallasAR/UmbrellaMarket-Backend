@@ -53,11 +53,13 @@ const userRegistration = async ({ email, pass }) => {
     // password encryption
     const hashedPass = bcrypt.hashSync(pass, 10);
 
+    const userId = generateUniqueId();
+
     // Insert the new user into the db
-    const { data, error } = await sdb
+    const { error } = await sdb
     .from("User")
     .insert({
-        id: generateUniqueId(),
+        id: userId,
         email: email,
         pass: hashedPass,
         avatar: "https://cdn-icons-png.flaticon.com/512/219/219988.png", // default avatar
@@ -71,7 +73,7 @@ const userRegistration = async ({ email, pass }) => {
     throw new Error("Failed to register user: " + error.message);
     }
 
-    const token = jwt.sign({ id: hashedPass, email: email }, process.env.JWT_TOKEN);
+    const token = jwt.sign({ id: userId, email: email }, process.env.JWT_TOKEN);
     return token;
 };
 
