@@ -51,6 +51,7 @@ Execute as migrations em ordem no Supabase SQL Editor:
 migrations/001_marketplace_saas_extensions.sql
 migrations/002_reviews_subscriptions_webhooks.sql
 migrations/003_pharmacy_operations.sql
+migrations/004_saas_onboarding.sql
 ```
 
 Essas migrations adicionam:
@@ -67,6 +68,7 @@ Essas migrations adicionam:
 - Vínculo de usuário com farmácia (`User.pharmacy_id`)
 - Lotes com validade (`MedicineBatch`)
 - Status operacional e plano da farmácia
+- Planos SaaS (`SaasPlan`), onboarding de farmácias e comissões por venda
 
 ## Rodando localmente
 
@@ -222,6 +224,16 @@ POST /api/pharmacy/alerts/scan
 GET  /api/pharmacy/orders
 PATCH /api/pharmacy/orders/:sessionId/status
 PATCH /api/pharmacy/status
+GET  /api/pharmacy/financial
+
+GET  /api/onboarding/plans
+GET  /api/onboarding/status
+POST /api/onboarding/register
+
+GET  /api/admin/pharmacies/pending
+PATCH /api/admin/pharmacies/:id/approve
+PATCH /api/admin/pharmacies/:id/reject
+GET  /api/admin/financial
 ```
 
 ## Observações de produção
