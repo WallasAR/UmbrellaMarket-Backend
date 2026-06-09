@@ -266,7 +266,7 @@ POST /api/notifications/push-subscribe
 npm test
 ```
 
-Cobertura atual: health, Swagger `/docs`, rate limit headers, notificações VAPID (incl. push-subscribe), cupons, assinaturas, autenticação (401/403/role), validação Zod, schemas de domínio e formatação CSV financeiro.
+Cobertura atual: health, Swagger `/docs`, rate limit headers, webhooks Stripe (assinatura inválida/secret ausente), notificações VAPID (incl. push-subscribe), cupons, assinaturas, onboarding, prescriptions, autenticação (401/403/role), validação Zod, schemas de domínio e formatação CSV financeiro.
 
 Swagger documenta também subscriptions, coupons, prescriptions, onboarding e webhooks em `/docs`.
 
@@ -292,6 +292,18 @@ VAPID_SUBJECT=mailto:admin@seudominio.com
 - Limite de produtos por plano SaaS (`max_products`) aplicado ao cadastrar medicamentos com `pharmacy_id`.
 
 Para deploy em produção, consulte também [DEPLOY.md](./DEPLOY.md).
+
+## Pull request (backend)
+
+Branch sugerida: `fix/marketplace-api-contracts` → base `master`.
+
+Antes de abrir o PR:
+
+1. `npm test`
+2. Rodar migrations `001`–`006` no Supabase de staging
+3. Configurar `STRIPE_WEBHOOK_SECRET` e testar evento na Stripe
+
+Compare: https://github.com/WallasAR/UmbrellaMarket-Backend/compare/master...fix/marketplace-api-contracts
 
 ## Observações de produção
 
