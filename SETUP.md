@@ -255,6 +255,21 @@ GET  /health
 GET  /api/admin/metrics
 GET  /api/pharmacy/metrics
 DELETE /api/pharmacy/products/:id
+
+GET  /api/notifications/vapid-public-key
+POST /api/notifications/push-subscribe
+```
+
+Gere chaves VAPID para push (opcional):
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+```env
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:admin@seudominio.com
 ```
 
 ## Segurança
