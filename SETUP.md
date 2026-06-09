@@ -39,9 +39,15 @@ SMTP_SECURE=false
 SMTP_USER=usuario
 SMTP_PASS=senha
 SMTP_FROM=Umbrella Farmácia <noreply@seudominio.com>
+
+WHATSAPP_API_URL=https://sua-api-whatsapp.com/messages
+WHATSAPP_API_TOKEN=seu_token
+WHATSAPP_CHANNEL=umbrella-alerts
+
+PHARMACY_PANEL_URL=http://localhost:4200/pharmacy
 ```
 
-SMTP é opcional. Se não estiver configurado, os e-mails são ignorados com log no console.
+SMTP e WhatsApp são opcionais. Se não estiverem configurados, os envios são ignorados com log no console.
 
 ## Banco de dados
 
@@ -52,6 +58,7 @@ migrations/001_marketplace_saas_extensions.sql
 migrations/002_reviews_subscriptions_webhooks.sql
 migrations/003_pharmacy_operations.sql
 migrations/004_saas_onboarding.sql
+migrations/005_pharmacy_billing.sql
 ```
 
 Essas migrations adicionam:
@@ -69,6 +76,7 @@ Essas migrations adicionam:
 - Lotes com validade (`MedicineBatch`)
 - Status operacional e plano da farmácia
 - Planos SaaS (`SaasPlan`), onboarding de farmácias e comissões por venda
+- Billing Stripe das farmácias (`stripe_customer_id`, `stripe_subscription_id`)
 
 ## Rodando localmente
 
@@ -234,7 +242,17 @@ GET  /api/admin/pharmacies/pending
 PATCH /api/admin/pharmacies/:id/approve
 PATCH /api/admin/pharmacies/:id/reject
 GET  /api/admin/financial
+
+GET  /api/pharmacy/billing
+POST /api/pharmacy/billing/checkout
+POST /api/pharmacy/billing/portal
 ```
+
+## Segurança
+
+- Rate limiting global em `/api` (300 req / 15 min).
+- Rate limiting reforçado em `/api/auth` (30 req / 15 min).
+- Validação de payload com Zod em rotas críticas (auth, onboarding, lotes, status).
 
 ## Observações de produção
 
