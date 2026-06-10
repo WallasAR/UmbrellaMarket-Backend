@@ -224,6 +224,22 @@ const pushSubscriptionSchema = z.object({
   })
 });
 
+const bannerCreateSchema = z.object({
+  title: z.string().min(2),
+  subtitle: z.string().optional(),
+  image_url: z.string().url().optional(),
+  link_url: z.string().url().optional(),
+  category: z.string().optional(),
+  sponsor: z.string().optional(),
+  gradient: z.string().optional(),
+  priority: z.coerce.number().int().optional(),
+  active: z.boolean().optional(),
+  starts_at: z.string().optional(),
+  ends_at: z.string().optional()
+});
+
+const bannerUpdateSchema = bannerCreateSchema.partial();
+
 export {
   loginSchema,
   registerSchema,
@@ -257,5 +273,7 @@ export {
   couponCreateSchema,
   productCreateSchema,
   productUpdateSchema,
-  pushSubscriptionSchema
+  pushSubscriptionSchema,
+  bannerCreateSchema,
+  bannerUpdateSchema
 };

@@ -13,7 +13,11 @@ import {
   coupons,
   addCoupon,
   addPharmacy,
-  auditLogs
+  auditLogs,
+  banners,
+  addBanner,
+  editBanner,
+  removeBanner
 } from "../controllers/adminController.js";
 import { pending, approve, reject } from "../controllers/onboardingController.js";
 import { getPlatformFinancials, buildPlatformFinancialCsv } from "../services/financialService.js";
@@ -25,7 +29,9 @@ import {
   pharmacyRejectSchema,
   couponCreateSchema,
   productCreateSchema,
-  kycReviewSchema
+  kycReviewSchema,
+  bannerCreateSchema,
+  bannerUpdateSchema
 } from "../schemas/index.js";
 import { adminListDocuments, reviewDocument } from "../controllers/kycController.js";
 
@@ -44,6 +50,10 @@ router.post("/coupons", validateBody(couponCreateSchema), addCoupon);
 
 router.get("/users", requireRole("admin"), users);
 router.get("/audit-logs", requireRole("admin"), auditLogs);
+router.get("/banners", requireRole("admin"), banners);
+router.post("/banners", requireRole("admin"), validateBody(bannerCreateSchema), addBanner);
+router.patch("/banners/:id", requireRole("admin"), validateBody(bannerUpdateSchema), editBanner);
+router.delete("/banners/:id", requireRole("admin"), removeBanner);
 router.patch("/users/:id/role", requireRole("admin"), validateBody(roleUpdateSchema), setUserRole);
 router.post("/pharmacies", requireRole("admin"), addPharmacy);
 router.get("/pharmacies/pending", requireRole("admin"), pending);

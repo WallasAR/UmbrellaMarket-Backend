@@ -11,6 +11,12 @@ import { listAllOrders, updateOrderStatus } from "../services/orderService.js";
 import { listCoupons, createCoupon } from "../services/couponService.js";
 import { createPharmacy } from "../services/pharmacyService.js";
 import { listAuditLogs } from "../services/auditService.js";
+import {
+  listAllBanners,
+  createBanner,
+  updateBanner,
+  deleteBanner
+} from "../services/bannerService.js";
 
 const dashboard = async (req, res, next) => {
   try {
@@ -134,6 +140,42 @@ const auditLogs = async (req, res, next) => {
   }
 };
 
+const banners = async (req, res, next) => {
+  try {
+    const items = await listAllBanners();
+    res.status(200).json(items);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const addBanner = async (req, res, next) => {
+  try {
+    const banner = await createBanner(req.body);
+    res.status(201).json(banner);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const editBanner = async (req, res, next) => {
+  try {
+    const banner = await updateBanner(req.params.id, req.body);
+    res.status(200).json(banner);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const removeBanner = async (req, res, next) => {
+  try {
+    await deleteBanner(req.params.id);
+    res.status(200).json({ message: "Banner removed" });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   dashboard,
   createMedicine,
@@ -146,5 +188,9 @@ export {
   coupons,
   addCoupon,
   addPharmacy,
-  auditLogs
+  auditLogs,
+  banners,
+  addBanner,
+  editBanner,
+  removeBanner
 };

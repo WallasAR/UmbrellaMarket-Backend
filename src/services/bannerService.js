@@ -1,0 +1,63 @@
+import sdb from "./database.js";
+
+const listActiveBanners = async ({ category, limit = 10 } = {}) => {
+  const now = new Date().toISOString();
+
+  let query = sdb
+    .from("InstitutionalBanner")
+    .select("*")
+    .eq("active", true)
+    .order("priority", { ascending: false })
+    .limit(Math.min(limit, 20));
+
+  if (category) query = query.eq("category", category);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  return (data || []).filter((banner) => {
+    if (banner.starts_at && banner.starts_at > now) return false;
+    if (banner.ends_at && banner.ends_at < now) return false;
+    return true;
+  });
+};
+
+const listAllBanners = async () => {
+  const { data, error } = await sdb
+    .from("InstitutionalBanner")
+    .select("*")
+    .order("priority", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return data || [];
+};
+
+const createBanner = async (payload) => {
+  const { data, error } = await sdb
+    .from("InstitutionalBanner")
+    .insert(payload)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+const updateBanner = async (id, payload) => {
+  const { data, error } = await sdb
+    .from("InstitutionalBanner")
+    .update(payload)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+const deleteBanner = async (id) => {
+  const { error } = await sdb.from("InstitutionalBanner").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+};
+
+export { listActiveBanners, listAllBanners, createBanner, updateBanner, deleteBanner };
