@@ -1,10 +1,39 @@
 import sdb from "./database.js";
 
-const createOrderGroup = async (userId) => {
+const createOrderGroup = async (userId, { splitPlan = null, checkoutMode = "split" } = {}) => {
   const { data, error } = await sdb
     .from("OrderGroup")
-    .insert({ user_id: userId, status: "pending_payment" })
+    .insert({
+      user_id: userId,
+      status: "pending_payment",
+      split_plan: splitPlan,
+      checkout_mode: checkoutMode
+    })
     .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+const saveOrderGroupCheckout = async (orderGroupId, { splitPlan, stripeSessionId, checkoutMode = "unified" }) => {
+  const { error } = await sdb
+    .from("OrderGroup")
+    .update({
+      split_plan: splitPlan,
+      stripe_session_id: stripeSessionId,
+      checkout_mode: checkoutMode
+    })
+    .eq("id", orderGroupId);
+
+  if (error) throw new Error(error.message);
+};
+
+const getOrderGroupSplitPlan = async (orderGroupId) => {
+  const { data, error } = await sdb
+    .from("OrderGroup")
+    .select("split_plan, checkout_mode, stripe_session_id")
+    .eq("id", orderGroupId)
     .single();
 
   if (error) throw new Error(error.message);
@@ -89,4 +118,4 @@ const listUserOrderGroups = async (userId) => {
   });
 };
 
-export { createOrderGroup, updateOrderGroupStatus, listUserOrderGroups };
+export { createOrderGroup, saveOrderGroupCheckout, getOrderGroupSplitPlan, updateOrderGroupStatus, listUserOrderGroups };
