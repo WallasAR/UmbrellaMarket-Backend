@@ -14,8 +14,16 @@ import {
   prescriptionReviewSchema,
   kycUploadSchema,
   pickupConfirmSchema,
-  boostCreateSchema
+  boostCreateSchema,
+  staffAssignSchema,
+  staffPermissionsSchema
 } from "../schemas/index.js";
+import {
+  listTeam,
+  addTeamMember,
+  updateTeamPermissions,
+  removeTeamMember
+} from "../controllers/teamController.js";
 import { startOnboarding, getStatus } from "../controllers/connectController.js";
 import { uploadDocument, listDocuments } from "../controllers/kycController.js";
 import {
@@ -131,5 +139,10 @@ router.get("/boosts/metrics", requirePharmacyPermission("products"), boostMetric
 router.get("/boosts", requirePharmacyPermission("products"), boosts);
 router.post("/boosts", requirePharmacyPermission("products"), validateBody(boostCreateSchema), addBoost);
 router.delete("/boosts/:id", requirePharmacyPermission("products"), removeBoost);
+
+router.get("/team", requirePharmacyOwner, listTeam);
+router.post("/team", requirePharmacyOwner, validateBody(staffAssignSchema), addTeamMember);
+router.put("/team/:userId/permissions", requirePharmacyOwner, validateBody(staffPermissionsSchema), updateTeamPermissions);
+router.delete("/team/:userId", requirePharmacyOwner, removeTeamMember);
 
 export default router;
