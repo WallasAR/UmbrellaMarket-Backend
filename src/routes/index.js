@@ -20,6 +20,8 @@ import pickupRoutes from "./pickup.js";
 import priceAlertRoutes from "./price-alerts.js";
 import symptomRoutes from "./symptoms.js";
 import copilotRoutes from "./copilot.js";
+import bannerRoutes from "./banners.js";
+import cronRoutes from "./cron.js";
 
 const router = express.Router();
 
@@ -43,5 +45,7 @@ router.use("/pickup", pickupRoutes);
 router.use("/price-alerts", priceAlertRoutes);
 router.use("/symptoms", symptomRoutes);
 router.use("/copilot", copilotRoutes);
+router.use("/banners", bannerRoutes);
+router.use("/cron", cronRoutes);
 
 export default router;
