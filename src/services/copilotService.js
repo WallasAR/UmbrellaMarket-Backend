@@ -11,8 +11,21 @@ import {
   appendMessage,
   updateSessionTitle
 } from "./copilotSessionService.js";
+import { chatWithLLM } from "./copilotLLMService.js";
 
 const DISCLAIMER = "Sou um assistente informativo. Não substituo orientação médica ou farmacêutica.";
+
+const buildProductSearchPayload = (query, products) => {
+  const reply = products.length
+    ? `Aqui estão sugestões para "${query}":`
+    : `Não encontrei resultados para "${query}". Tente descrever um sintoma ou o nome do medicamento.`;
+
+  return {
+    reply: `${reply}\n\n${DISCLAIMER}`,
+    intent: "product_search",
+    products
+  };
+};
 
 const logCopilot = async ({ userId, intent, inputText, responseSummary }) => {
   await sdb.from("CopilotLog").insert({
@@ -101,17 +114,25 @@ const chat = async ({ userId, message, sessionId }) => {
     await logCopilot({ userId, intent: "help", inputText: trimmed, responseSummary: reply });
   } else {
     const products = await fuzzySearchProducts(trimmed, { limit: 6 });
-    const reply = products.length
-      ? `Aqui estão sugestões para "${trimmed}":`
-      : `Não encontrei resultados para "${trimmed}". Tente descrever um sintoma ou o nome do medicamento.`;
 
-    payload = {
-      reply: `${reply}\n\n${DISCLAIMER}`,
-      intent: "product_search",
-      products
-    };
-
-    await logCopilot({ userId, intent: "product_search", inputText: trimmed, responseSummary: reply });
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        const llm = await chatWithLLM({ message: trimmed, products });
+        payload = {
+          reply: `${llm.reply}\n\n${DISCLAIMER}`,
+          intent: "llm_chat",
+          products: llm.products
+        };
+        await logCopilot({ userId, intent: "llm_chat", inputText: trimmed, responseSummary: llm.reply.slice(0, 120) });
+      } catch (err) {
+        console.warn("Copilot LLM fallback:", err.message);
+        payload = buildProductSearchPayload(trimmed, products);
+        await logCopilot({ userId, intent: "product_search", inputText: trimmed, responseSummary: payload.reply.slice(0, 120) });
+      }
+    } else {
+      payload = buildProductSearchPayload(trimmed, products);
+      await logCopilot({ userId, intent: "product_search", inputText: trimmed, responseSummary: payload.reply.slice(0, 120) });
+    }
   }
 
   await persistExchange({ sessionId: session.id, userMessage: trimmed, assistantPayload: payload });
