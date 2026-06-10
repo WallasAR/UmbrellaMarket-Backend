@@ -2,7 +2,8 @@ import {
   uploadPrescription,
   listUserPrescriptions,
   listPendingPrescriptions,
-  reviewPrescription
+  reviewPrescription,
+  listUserPrescriptionLists
 } from "../services/prescriptionService.js";
 import { createNotification } from "../services/notificationService.js";
 import { logAudit } from "../services/auditService.js";
@@ -151,9 +152,19 @@ const reviewPharmacyPrescription = async (req, res, next) => {
   }
 };
 
+const listPrescriptionLists = async (req, res, next) => {
+  try {
+    const lists = await listUserPrescriptionLists(req.user.id);
+    res.status(200).json(lists);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   createPrescription,
   listPrescriptions,
+  listPrescriptionLists,
   listPending,
   review,
   listPharmacyPending,

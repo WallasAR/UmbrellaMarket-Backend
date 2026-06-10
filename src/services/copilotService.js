@@ -3,6 +3,10 @@ import { searchBySymptom, fuzzySearchProducts } from "./symptomService.js";
 import { SYMPTOM_MAP } from "../data/symptomMap.js";
 import { bulkAddToCart } from "./cartService.js";
 import {
+  createPendingPrescriptionsForMedicines,
+  savePrescriptionListFromScan
+} from "./prescriptionService.js";
+import {
   getOrCreateSession,
   appendMessage,
   updateSessionTitle
@@ -174,10 +178,12 @@ const scanPrescription = async ({ userId, text, fileData, sessionId }) => {
 
 const prescriptionToCart = async ({ userId, text, fileData, items }) => {
   let cartItems = items;
+  let scanMatches = [];
 
   if (!cartItems?.length) {
-    const { matches } = await matchPrescriptionProducts({ text, fileData });
-    cartItems = matches.map((product) => ({
+    const result = await matchPrescriptionProducts({ text, fileData });
+    scanMatches = result.matches;
+    cartItems = scanMatches.map((product) => ({
       medicine_id: product.id,
       quantity: product.suggested_quantity || 1
     }));
@@ -189,10 +195,25 @@ const prescriptionToCart = async ({ userId, text, fileData, items }) => {
 
   const cartResult = await bulkAddToCart(userId, cartItems);
 
+  const medicineIds = cartItems.map((item) => item.medicine_id);
+  const pendingRx = await createPendingPrescriptionsForMedicines(userId, medicineIds);
+
+  await savePrescriptionListFromScan({
+    userId,
+    title: "Itens da receita",
+    items: cartItems.map((item, index) => ({
+      medicine_id: item.medicine_id,
+      matched_term: scanMatches[index]?.matched_term,
+      quantity: item.quantity
+    }))
+  }).catch(() => null);
+
   return {
     message: `${cartResult.added + cartResult.updated} item(ns) adicionado(s) ao carrinho`,
     cart: cartResult,
-    items: cartItems
+    items: cartItems,
+    pending_prescriptions: pendingRx.length,
+    requires_pharmacist_review: pendingRx.length > 0
   };
 };
 
