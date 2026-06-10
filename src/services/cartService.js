@@ -104,9 +104,55 @@ const deleteProductFromCart = async (userId, productId) => {
   return;
 };
 
-export { 
-  getCart, 
-  addProductToCart, 
-  updateCartProducts, 
-  deleteProductFromCart 
+const bulkAddToCart = async (userId, items = []) => {
+  const results = { added: 0, updated: 0, skipped: [], errors: [] };
+
+  for (const item of items) {
+    const medicineId = Number(item.medicine_id);
+    const quantity = Number(item.quantity || 1);
+
+    if (!medicineId || quantity < 1) {
+      results.skipped.push({ medicine_id: item.medicine_id, reason: "invalid_item" });
+      continue;
+    }
+
+    const { data: medicine, error: medError } = await sdb
+      .from("Medicine")
+      .select("id, stock")
+      .eq("id", medicineId)
+      .single();
+
+    if (medError || !medicine || medicine.stock < quantity) {
+      results.skipped.push({ medicine_id: medicineId, reason: "unavailable" });
+      continue;
+    }
+
+    try {
+      const { data: existing } = await sdb
+        .from("Cart")
+        .select("medicine_id")
+        .eq("user_id", userId)
+        .eq("medicine_id", medicineId);
+
+      if (existing?.length) {
+        await updateCartProducts(userId, medicineId, quantity);
+        results.updated += 1;
+      } else {
+        await addProductToCart(userId, medicineId, quantity);
+        results.added += 1;
+      }
+    } catch (err) {
+      results.errors.push({ medicine_id: medicineId, message: err.message });
+    }
+  }
+
+  return results;
+};
+
+export {
+  getCart,
+  addProductToCart,
+  updateCartProducts,
+  deleteProductFromCart,
+  bulkAddToCart
 };

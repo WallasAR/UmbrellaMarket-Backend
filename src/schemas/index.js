@@ -56,7 +56,7 @@ const checkoutCartSchema = z.object({
   destination_lat: z.coerce.number().min(-90).max(90).optional(),
   destination_lng: z.coerce.number().min(-180).max(180).optional(),
   destination_address: z.string().optional(),
-  courier: z.enum(["local", "uber"]).optional(),
+  courier: z.enum(["local", "uber", "99"]).optional(),
   delivery_quotes: z.record(z.string(), z.object({
     price: z.coerce.number().nonnegative(),
     eta_minutes: z.coerce.number().int().positive().optional(),
@@ -77,7 +77,7 @@ const deliveryQuoteSchema = z.object({
   pharmacy_ids: z.array(z.string().uuid()).min(1),
   destination_lat: z.coerce.number().min(-90).max(90),
   destination_lng: z.coerce.number().min(-180).max(180),
-  courier: z.enum(["local", "uber"]).optional()
+  courier: z.enum(["local", "uber", "99"]).optional()
 });
 
 const priceAlertSchema = z.object({
@@ -92,14 +92,38 @@ const pickupConfirmSchema = z.object({
 });
 
 const copilotChatSchema = z.object({
-  message: z.string().min(2).max(1000)
+  message: z.string().min(2).max(1000),
+  session_id: z.string().uuid().optional()
 });
 
 const prescriptionScanSchema = z.object({
   text: z.string().optional(),
-  file_data: z.string().optional()
+  file_data: z.string().optional(),
+  session_id: z.string().uuid().optional()
 }).refine((data) => data.text || data.file_data, {
   message: "Informe text ou file_data"
+});
+
+const prescriptionToCartSchema = z.object({
+  text: z.string().optional(),
+  file_data: z.string().optional(),
+  items: z.array(z.object({
+    medicine_id: z.coerce.number().int().positive(),
+    quantity: z.coerce.number().int().positive().optional().default(1)
+  })).optional()
+}).refine((data) => data.items?.length || data.text || data.file_data, {
+  message: "Informe items, text ou file_data"
+});
+
+const bulkCartSchema = z.object({
+  items: z.array(z.object({
+    medicine_id: z.coerce.number().int().positive(),
+    quantity: z.coerce.number().int().positive().optional().default(1)
+  })).min(1).max(30)
+});
+
+const sponsoredClickSchema = z.object({
+  source: z.enum(["listing", "home", "copilot", "search"]).optional()
 });
 
 const boostCreateSchema = z.object({
@@ -219,6 +243,9 @@ export {
   pickupConfirmSchema,
   copilotChatSchema,
   prescriptionScanSchema,
+  prescriptionToCartSchema,
+  bulkCartSchema,
+  sponsoredClickSchema,
   boostCreateSchema,
   reviewSchema,
   couponValidateSchema,

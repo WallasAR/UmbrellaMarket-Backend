@@ -7,7 +7,12 @@ import { logAudit } from "../services/auditService.js";
 import { confirmPickup } from "../services/pickupService.js";
 import { advanceDeliveryStatus, listPharmacyDeliveries } from "../services/deliveryService.js";
 import { getPriceBenchmark, getProductPriceHistory, recordPriceSnapshot } from "../services/priceHistoryService.js";
-import { listPharmacyBoosts, createBoost, deactivateBoost } from "../services/boostService.js";
+import {
+  listPharmacyBoosts,
+  createBoost,
+  deactivateBoost,
+  getBoostMetrics
+} from "../services/boostService.js";
 import sdb from "../services/database.js";
 import {
   getDashboard,
@@ -291,6 +296,15 @@ const removeBoost = async (req, res, next) => {
   }
 };
 
+const boostMetrics = async (req, res, next) => {
+  try {
+    const data = await getBoostMetrics(req.pharmacyId, req.query.period || "30d");
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   billing,
   billingCheckout,
@@ -316,5 +330,6 @@ export {
   advanceDelivery,
   boosts,
   addBoost,
-  removeBoost
+  removeBoost,
+  boostMetrics
 };

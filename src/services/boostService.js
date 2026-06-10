@@ -109,10 +109,79 @@ const deactivateBoost = async (boostId, pharmacyId) => {
   return data;
 };
 
+const recordSponsoredClick = async ({ medicineId, userId, source = "listing" }) => {
+  const now = new Date().toISOString();
+
+  const { data: boost } = await sdb
+    .from("SponsoredBoost")
+    .select("id, pharmacy_id")
+    .eq("medicine_id", medicineId)
+    .eq("active", true)
+    .lte("starts_at", now)
+    .gte("ends_at", now)
+    .order("priority", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!boost) return null;
+
+  const { data, error } = await sdb
+    .from("SponsoredClick")
+    .insert({
+      boost_id: boost.id,
+      pharmacy_id: boost.pharmacy_id,
+      medicine_id: medicineId,
+      user_id: userId || null,
+      source
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+const getBoostMetrics = async (pharmacyId, period = "30d") => {
+  const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
+  const start = new Date();
+  start.setDate(start.getDate() - days);
+
+  const { data: clicks, error } = await sdb
+    .from("SponsoredClick")
+    .select("id, medicine_id, boost_id, source, created_at, Medicine(name)")
+    .eq("pharmacy_id", pharmacyId)
+    .gte("created_at", start.toISOString())
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  const byMedicine = {};
+  for (const click of clicks || []) {
+    const key = click.medicine_id;
+    if (!byMedicine[key]) {
+      byMedicine[key] = {
+        medicine_id: key,
+        medicine_name: click.Medicine?.name,
+        clicks: 0
+      };
+    }
+    byMedicine[key].clicks += 1;
+  }
+
+  return {
+    period,
+    total_clicks: (clicks || []).length,
+    by_medicine: Object.values(byMedicine).sort((a, b) => b.clicks - a.clicks),
+    recent: (clicks || []).slice(0, 20)
+  };
+};
+
 export {
   getActiveBoosts,
   applyBoostOrdering,
   listPharmacyBoosts,
   createBoost,
-  deactivateBoost
+  deactivateBoost,
+  recordSponsoredClick,
+  getBoostMetrics
 };

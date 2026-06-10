@@ -1,4 +1,5 @@
 import { quoteDeliveries, getDeliveryByPurchase } from "../services/deliveryService.js";
+import { getAvailableCouriers } from "../services/courierService.js";
 
 const quote = async (req, res, next) => {
   try {
@@ -25,4 +26,12 @@ const track = async (req, res, next) => {
   }
 };
 
-export { quote, track };
+const listCouriers = async (_req, res, next) => {
+  try {
+    res.status(200).json(getAvailableCouriers());
+  } catch (error) {
+    next(error);
+  }
+};
+
+export { quote, track, listCouriers };

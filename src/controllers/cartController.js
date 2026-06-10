@@ -3,7 +3,8 @@ import {
   addProductToCart,
   updateCartProducts,
   deleteProductFromCart,
-} from "../services/cartService.js"
+  bulkAddToCart
+} from "../services/cartService.js";
 
 const listCart = async (req, res, next) => {
   try {
@@ -60,9 +61,22 @@ const removeFromCart = async (req, res, next) => {
   }
 };
 
+const bulkAdd = async (req, res, next) => {
+  try {
+    const result = await bulkAddToCart(req.user.id, req.body.items);
+    res.status(200).json({
+      message: `${result.added + result.updated} item(ns) processado(s)`,
+      ...result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   listCart,
   addToCart,
   updateCart,
-  removeFromCart
+  removeFromCart,
+  bulkAdd
 };

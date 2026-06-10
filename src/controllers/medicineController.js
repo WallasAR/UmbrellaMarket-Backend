@@ -1,5 +1,5 @@
 import { fetchProducts, fetchProduct, listCategories, fetchAlternatives } from '../services/medicineService.js';
-import { getActiveBoosts } from '../services/boostService.js';
+import { getActiveBoosts, recordSponsoredClick } from '../services/boostService.js';
 
 const getProducts = async (req, res, next) => {
   try {
@@ -51,4 +51,20 @@ const getSponsored = async (_req, res, next) => {
   }
 };
 
-export { getProducts, getProduct, getCategories, getAlternatives, getSponsored };
+const postSponsoredClick = async (req, res, next) => {
+  try {
+    const medicineId = Number(req.params.id);
+    const click = await recordSponsoredClick({
+      medicineId,
+      userId: req.user?.id,
+      source: req.body.source || "listing"
+    });
+
+    if (!click) return res.status(404).json({ message: "No active sponsored boost for this product" });
+    res.status(201).json(click);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export { getProducts, getProduct, getCategories, getAlternatives, getSponsored, postSponsoredClick };

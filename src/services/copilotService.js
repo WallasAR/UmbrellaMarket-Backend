@@ -1,6 +1,12 @@
 import sdb from "./database.js";
 import { searchBySymptom, fuzzySearchProducts } from "./symptomService.js";
 import { SYMPTOM_MAP } from "../data/symptomMap.js";
+import { bulkAddToCart } from "./cartService.js";
+import {
+  getOrCreateSession,
+  appendMessage,
+  updateSessionTitle
+} from "./copilotSessionService.js";
 
 const DISCLAIMER = "Sou um assistente informativo. Não substituo orientação médica ou farmacêutica.";
 
@@ -41,9 +47,33 @@ const extractMedicineCandidates = (text) => {
   return [...new Set(candidates)].slice(0, 15);
 };
 
-const chat = async ({ userId, message }) => {
+const persistExchange = async ({ sessionId, userMessage, assistantPayload }) => {
+  await appendMessage({ sessionId, role: "user", content: userMessage });
+  await appendMessage({
+    sessionId,
+    role: "assistant",
+    content: assistantPayload.reply,
+    metadata: {
+      intent: assistantPayload.intent,
+      products: (assistantPayload.products || []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        matched_term: p.matched_term
+      }))
+    }
+  });
+};
+
+const chat = async ({ userId, message, sessionId }) => {
   const trimmed = message?.trim();
   if (!trimmed) throw new Error("Message is required");
+
+  const session = await getOrCreateSession(userId, sessionId);
+  if (!sessionId) {
+    await updateSessionTitle(session.id, trimmed.slice(0, 60));
+  }
+
+  let payload;
 
   const symptom = detectSymptomIntent(trimmed);
   if (symptom) {
@@ -52,38 +82,40 @@ const chat = async ({ userId, message }) => {
       ? `Encontrei ${results.length} opção(ões) relacionadas a "${SYMPTOM_MAP[symptom].label}". Confira os produtos sugeridos abaixo.`
       : `Não encontrei produtos para "${SYMPTOM_MAP[symptom].label}" no momento. Tente outro termo ou fale com um farmacêutico.`;
 
-    await logCopilot({ userId, intent: "symptom_search", inputText: trimmed, responseSummary: reply });
-
-    return {
+    payload = {
       reply: `${reply}\n\n${DISCLAIMER}`,
       intent: "symptom_search",
       symptom,
       terms,
       products: results
     };
-  }
 
-  if (/receita|prescri|medicamento|remédio|remedio/i.test(trimmed)) {
-    const reply = "Para ler uma receita, use a opção \"Escanear receita\" e cole o texto ou envie a imagem. Também posso buscar por sintoma, como febre, dor ou gripe.";
+    await logCopilot({ userId, intent: "symptom_search", inputText: trimmed, responseSummary: reply });
+  } else if (/receita|prescri|medicamento|remédio|remedio/i.test(trimmed)) {
+    const reply = "Para ler uma receita, use \"Escanear receita\" e depois \"Adicionar tudo ao carrinho\". Também posso buscar por sintoma, como febre, dor ou gripe.";
+    payload = { reply: `${reply}\n\n${DISCLAIMER}`, intent: "help", products: [] };
     await logCopilot({ userId, intent: "help", inputText: trimmed, responseSummary: reply });
-    return { reply: `${reply}\n\n${DISCLAIMER}`, intent: "help", products: [] };
+  } else {
+    const products = await fuzzySearchProducts(trimmed, { limit: 6 });
+    const reply = products.length
+      ? `Aqui estão sugestões para "${trimmed}":`
+      : `Não encontrei resultados para "${trimmed}". Tente descrever um sintoma ou o nome do medicamento.`;
+
+    payload = {
+      reply: `${reply}\n\n${DISCLAIMER}`,
+      intent: "product_search",
+      products
+    };
+
+    await logCopilot({ userId, intent: "product_search", inputText: trimmed, responseSummary: reply });
   }
 
-  const products = await fuzzySearchProducts(trimmed, { limit: 6 });
-  const reply = products.length
-    ? `Aqui estão sugestões para "${trimmed}":`
-    : `Não encontrei resultados para "${trimmed}". Tente descrever um sintoma (ex: febre, dor de cabeça) ou o nome do medicamento.`;
+  await persistExchange({ sessionId: session.id, userMessage: trimmed, assistantPayload: payload });
 
-  await logCopilot({ userId, intent: "product_search", inputText: trimmed, responseSummary: reply });
-
-  return {
-    reply: `${reply}\n\n${DISCLAIMER}`,
-    intent: "product_search",
-    products
-  };
+  return { session_id: session.id, ...payload };
 };
 
-const scanPrescription = async ({ userId, text, fileData }) => {
+const matchPrescriptionProducts = async ({ text, fileData }) => {
   let sourceText = text?.trim() || "";
 
   if (!sourceText && fileData && process.env.OPENAI_API_KEY) {
@@ -101,14 +133,34 @@ const scanPrescription = async ({ userId, text, fileData }) => {
     const found = await fuzzySearchProducts(candidate, { limit: 2 });
     for (const product of found) {
       if (!matches.some((item) => item.id === product.id)) {
-        matches.push({ ...product, matched_term: candidate });
+        matches.push({ ...product, matched_term: candidate, suggested_quantity: 1 });
       }
     }
   }
 
+  return { sourceText, candidates, matches };
+};
+
+const scanPrescription = async ({ userId, text, fileData, sessionId }) => {
+  const session = await getOrCreateSession(userId, sessionId);
+  const { sourceText, candidates, matches } = await matchPrescriptionProducts({ text, fileData });
+
   const reply = matches.length
-    ? `Identifiquei ${matches.length} medicamento(s) compatíveis na receita. Revise as quantidades com o farmacêutico antes do checkout.`
-    : "Não consegui associar os itens da receita a produtos do catálogo. Tente colar o texto com mais clareza ou adicione manualmente.";
+    ? `Identifiquei ${matches.length} medicamento(s) na receita. Você pode adicionar todos ao carrinho com um clique.`
+    : "Não consegui associar os itens da receita a produtos do catálogo. Tente colar o texto com mais clareza.";
+
+  const payload = {
+    reply: `${reply}\n\n${DISCLAIMER}`,
+    parsed_lines: candidates,
+    products: matches,
+    intent: "prescription_scan"
+  };
+
+  await persistExchange({
+    sessionId: session.id,
+    userMessage: "Escanear receita",
+    assistantPayload: payload
+  });
 
   await logCopilot({
     userId,
@@ -117,10 +169,30 @@ const scanPrescription = async ({ userId, text, fileData }) => {
     responseSummary: `${matches.length} matches`
   });
 
+  return { session_id: session.id, ...payload };
+};
+
+const prescriptionToCart = async ({ userId, text, fileData, items }) => {
+  let cartItems = items;
+
+  if (!cartItems?.length) {
+    const { matches } = await matchPrescriptionProducts({ text, fileData });
+    cartItems = matches.map((product) => ({
+      medicine_id: product.id,
+      quantity: product.suggested_quantity || 1
+    }));
+  }
+
+  if (!cartItems.length) {
+    throw new Error("Nenhum item válido para adicionar ao carrinho");
+  }
+
+  const cartResult = await bulkAddToCart(userId, cartItems);
+
   return {
-    reply: `${reply}\n\n${DISCLAIMER}`,
-    parsed_lines: candidates,
-    products: matches
+    message: `${cartResult.added + cartResult.updated} item(ns) adicionado(s) ao carrinho`,
+    cart: cartResult,
+    items: cartItems
   };
 };
 
@@ -155,4 +227,4 @@ const extractTextWithOpenAI = async (fileData) => {
   return json.choices?.[0]?.message?.content || "";
 };
 
-export { chat, scanPrescription };
+export { chat, scanPrescription, prescriptionToCart };
