@@ -224,10 +224,12 @@ const pushSubscriptionSchema = z.object({
   })
 });
 
-const bannerCreateSchema = z.object({
+const bannerFieldsSchema = z.object({
   title: z.string().min(2),
   subtitle: z.string().optional(),
   image_url: z.string().url().optional(),
+  file_name: z.string().optional(),
+  file_data: z.string().min(20).optional(),
   link_url: z.string().url().optional(),
   category: z.string().optional(),
   sponsor: z.string().optional(),
@@ -238,7 +240,20 @@ const bannerCreateSchema = z.object({
   ends_at: z.string().optional()
 });
 
-const bannerUpdateSchema = bannerCreateSchema.partial();
+const bannerCreateSchema = bannerFieldsSchema.refine((data) => data.image_url || data.file_data, {
+  message: "image_url or file_data is required"
+});
+
+const bannerUpdateSchema = bannerFieldsSchema.partial();
+
+const staffAssignSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(["operator", "pharmacist"])
+});
+
+const staffPermissionsSchema = z.object({
+  permissions: z.array(z.string().min(2)).min(1)
+});
 
 export {
   loginSchema,
@@ -275,5 +290,7 @@ export {
   productUpdateSchema,
   pushSubscriptionSchema,
   bannerCreateSchema,
-  bannerUpdateSchema
+  bannerUpdateSchema,
+  staffAssignSchema,
+  staffPermissionsSchema
 };

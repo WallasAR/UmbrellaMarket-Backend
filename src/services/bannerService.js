@@ -1,4 +1,5 @@
 import sdb from "./database.js";
+import { saveBannerImage } from "./bannerUploadService.js";
 
 const listActiveBanners = async ({ category, limit = 10 } = {}) => {
   const now = new Date().toISOString();
@@ -33,9 +34,20 @@ const listAllBanners = async () => {
 };
 
 const createBanner = async (payload) => {
+  const insertPayload = { ...payload };
+  delete insertPayload.file_data;
+  delete insertPayload.file_name;
+
+  if (payload.file_data) {
+    insertPayload.image_url = saveBannerImage({
+      fileName: payload.file_name,
+      fileData: payload.file_data
+    });
+  }
+
   const { data, error } = await sdb
     .from("InstitutionalBanner")
-    .insert(payload)
+    .insert(insertPayload)
     .select()
     .single();
 
