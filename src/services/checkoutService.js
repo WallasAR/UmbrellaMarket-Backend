@@ -18,10 +18,15 @@ import {
   cancelPharmacyBillingByStripeId,
   markPharmacyBillingPastDue
 } from "./billingService.js";
-import { getPharmacyPaymentConfig, handleAccountUpdated } from "./connectService.js";
+import { getPharmacyPaymentConfig, handleAccountUpdated, executeUnifiedTransfers } from "./connectService.js";
 import { fulfillSubscriptionRenewal } from "./subscriptionService.js";
 import { scanPriceAlerts } from "./priceAlertService.js";
-import { createOrderGroup, updateOrderGroupStatus } from "./orderGroupService.js";
+import {
+  createOrderGroup,
+  saveOrderGroupCheckout,
+  getOrderGroupSplitPlan,
+  updateOrderGroupStatus
+} from "./orderGroupService.js";
 import { fulfillOrderLogistics as runOrderLogistics } from "./orderLogisticsService.js";
 
 dotenv.config();
@@ -37,18 +42,194 @@ const ensurePrescriptions = async (userId, cartItems) => {
   }
 };
 
-const buildLineItems = (cartItems, priceRatio = 1) =>
+const buildLineItems = (cartItems, priceRatio = 1, namePrefix = "") =>
   cartItems.map((item) => {
     const unitPrice = applyProductDiscount(item.Medicine.price, item.Medicine.discount) * priceRatio;
+    const label = namePrefix ? `${namePrefix} — ${item.Medicine.name}` : item.Medicine.name;
     return {
       price_data: {
         currency: "brl",
-        product_data: { name: item.Medicine.name },
+        product_data: { name: label },
         unit_amount: toStripeAmount(unitPrice)
       },
       quantity: item.quantity
     };
   });
+
+const computeCouponRatio = async (couponCode, cartItems) => {
+  if (!couponCode) return { ratio: 1, coupon: null };
+
+  const subtotal = cartItems.reduce((sum, item) => {
+    const unit = applyProductDiscount(item.Medicine.price, item.Medicine.discount);
+    return sum + unit * item.quantity;
+  }, 0);
+
+  const coupon = await validateCoupon(couponCode, subtotal);
+  const discountedTotal = applyCouponDiscount(subtotal, coupon);
+  const ratio = subtotal > 0 ? discountedTotal / subtotal : 1;
+  return { ratio, coupon };
+};
+
+const buildSplitPlan = async (groups, couponRatio, fulfillmentByPharmacy) => {
+  const splitPlan = [];
+
+  for (const [pharmacyId, items] of Object.entries(groups)) {
+    const pharmacyName = items[0]?.Medicine?.Pharmacy?.name || "Farmácia";
+    const productSubtotal = items.reduce((sum, item) => {
+      const unit = applyProductDiscount(item.Medicine.price, item.Medicine.discount) * couponRatio;
+      return sum + unit * item.quantity;
+    }, 0);
+
+    const fulfillment = fulfillmentByPharmacy(pharmacyId);
+    const deliveryFee = fulfillment.fulfillment_mode === "delivery"
+      ? Number(fulfillment.delivery_fee || 0)
+      : 0;
+    const grossTotal = productSubtotal + deliveryFee;
+    const grossCents = toStripeAmount(grossTotal);
+
+    const paymentConfig = await getPharmacyPaymentConfig(pharmacyId);
+    const feeRate = Number(paymentConfig?.commission_rate ?? 0.1);
+    const applicationFeeCents = Math.round(grossCents * feeRate);
+    const transferCents = paymentConfig ? grossCents - applicationFeeCents : 0;
+
+    splitPlan.push({
+      pharmacy_id: pharmacyId,
+      pharmacy_name: pharmacyName,
+      product_subtotal: Number(productSubtotal.toFixed(2)),
+      delivery_fee: deliveryFee,
+      gross_cents: grossCents,
+      application_fee_cents: applicationFeeCents,
+      transfer_cents: transferCents,
+      connect_account_id: paymentConfig?.stripe_connect_account_id || null,
+      fulfillment: {
+        fulfillment_mode: fulfillment.fulfillment_mode || "delivery",
+        delivery_fee: deliveryFee,
+        eta_minutes: fulfillment.eta_minutes,
+        courier: fulfillment.courier || "local",
+        destination_address: fulfillment.destination_address || "",
+        destination_lat: fulfillment.destination_lat,
+        destination_lng: fulfillment.destination_lng
+      }
+    });
+  }
+
+  return splitPlan;
+};
+
+const buildUnifiedLineItems = (groups, couponRatio, fulfillmentByPharmacy) => {
+  const lineItems = [];
+
+  for (const [pharmacyId, items] of Object.entries(groups)) {
+    const pharmacyName = items[0]?.Medicine?.Pharmacy?.name || "Farmácia";
+    lineItems.push(...buildLineItems(items, couponRatio, pharmacyName));
+
+    const fulfillment = fulfillmentByPharmacy(pharmacyId);
+    const deliveryFee = fulfillment.fulfillment_mode === "delivery"
+      ? Number(fulfillment.delivery_fee || 0)
+      : 0;
+
+    if (deliveryFee > 0) {
+      lineItems.push({
+        price_data: {
+          currency: "brl",
+          product_data: { name: `Entrega — ${pharmacyName}` },
+          unit_amount: toStripeAmount(deliveryFee)
+        },
+        quantity: 1
+      });
+    }
+  }
+
+  return lineItems;
+};
+
+const insertPurchaseRows = async ({
+  sessionId,
+  userId,
+  cartItems,
+  couponRatio,
+  fulfillmentByPharmacy,
+  orderGroupId
+}) => {
+  const deliveryAssigned = new Set();
+
+  const purchaseData = cartItems.map((item) => {
+    const pharmacyId = item.Medicine.pharmacy_id || null;
+    const fulfillment = fulfillmentByPharmacy(pharmacyId || "default");
+    const includeDelivery = pharmacyId && !deliveryAssigned.has(pharmacyId);
+    if (includeDelivery) deliveryAssigned.add(pharmacyId);
+
+    return {
+      id: sessionId,
+      user_id: userId,
+      medicine_id: item.medicine_id,
+      quantity: item.quantity,
+      total_price: applyProductDiscount(item.Medicine.price, item.Medicine.discount) * couponRatio * item.quantity,
+      payment_status: "pending",
+      payment_method: "Cartão de credito",
+      order_status: "pending_payment",
+      pharmacy_id: pharmacyId,
+      fulfillment_mode: fulfillment.fulfillment_mode || "delivery",
+      delivery_fee: includeDelivery && fulfillment.fulfillment_mode === "delivery"
+        ? Number(fulfillment.delivery_fee || 0)
+        : 0,
+      order_group_id: orderGroupId || null
+    };
+  });
+
+  const { error: purchaseError } = await sdb.from("Purchase").insert(purchaseData);
+  if (purchaseError) throw new Error(purchaseError.message);
+};
+
+const createUnifiedMultiSession = async (userId, cartItems, groups, couponCode, fulfillmentByPharmacy) => {
+  const { ratio: couponRatio, coupon } = await computeCouponRatio(couponCode, cartItems);
+  const splitPlan = await buildSplitPlan(groups, couponRatio, fulfillmentByPharmacy);
+  const lineItems = buildUnifiedLineItems(groups, couponRatio, fulfillmentByPharmacy);
+  const orderGroup = await createOrderGroup(userId, { checkoutMode: "unified" });
+
+  const firstFulfillment = fulfillmentByPharmacy(Object.keys(groups)[0]);
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    line_items: lineItems,
+    mode: "payment",
+    success_url: `${process.env.SUCCESS_URL}?sessionId={CHECKOUT_SESSION_ID}`,
+    cancel_url: process.env.CANCEL_URL,
+    metadata: {
+      checkout_mode: "unified_multi",
+      order_group_id: orderGroup.id,
+      fulfillment_mode: firstFulfillment.fulfillment_mode || "delivery",
+      destination_address: firstFulfillment.destination_address || "",
+      destination_lat: firstFulfillment.destination_lat ? String(firstFulfillment.destination_lat) : "",
+      destination_lng: firstFulfillment.destination_lng ? String(firstFulfillment.destination_lng) : "",
+      courier: firstFulfillment.courier || "local"
+    }
+  });
+
+  await saveOrderGroupCheckout(orderGroup.id, {
+    splitPlan,
+    stripeSessionId: session.id,
+    checkoutMode: "unified"
+  });
+
+  await insertPurchaseRows({
+    sessionId: session.id,
+    userId,
+    cartItems,
+    couponRatio,
+    fulfillmentByPharmacy,
+    orderGroupId: orderGroup.id
+  });
+
+  if (coupon) await incrementCouponUsage(coupon.code);
+
+  return {
+    mode: "unified",
+    url: session.url,
+    order_group_id: orderGroup.id,
+    pharmacy_count: Object.keys(groups).length
+  };
+};
 
 const groupByPharmacy = (cartItems) => {
   const groups = {};
@@ -201,24 +382,13 @@ const cartCheckoutSession = async (userId, options = {}) => {
     return { mode: "single", url, fulfillment_mode };
   }
 
-  const sessions = [];
-  const orderGroup = await createOrderGroup(userId);
-
-  for (let i = 0; i < pharmacyKeys.length; i++) {
-    const key = pharmacyKeys[i];
-    const items = groups[key];
-    const pharmacyName = items[0]?.Medicine?.Pharmacy?.name || "Farmácia";
-    const url = await createSessionForItems(
-      userId,
-      items,
-      i === 0 ? couponCode : null,
-      buildFulfillment(key),
-      orderGroup.id
-    );
-    sessions.push({ pharmacyId: key, pharmacyName, url, items: items.length });
-  }
-
-  return { mode: "multi", sessions, order_group_id: orderGroup.id };
+  return createUnifiedMultiSession(
+    userId,
+    cartItems,
+    groups,
+    couponCode,
+    buildFulfillment
+  );
 };
 
 const itemCheckoutSession = async (userId, productId, quantity, couponCode) => {
@@ -287,12 +457,45 @@ const fulfillOrderLogistics = async (sessionId, purchaseItems, sessionMetadata =
   });
 };
 
+const fulfillUnifiedLogistics = async (sessionId, purchaseItems, splitPlan) => {
+  const userId = purchaseItems[0]?.user_id;
+  if (!userId || !splitPlan?.length) return;
+
+  for (const split of splitPlan) {
+    await runOrderLogistics({
+      purchaseId: sessionId,
+      userId,
+      pharmacyId: split.pharmacy_id,
+      fulfillmentMode: split.fulfillment?.fulfillment_mode || "delivery",
+      deliveryFee: split.fulfillment?.delivery_fee,
+      etaMinutes: split.fulfillment?.eta_minutes,
+      courier: split.fulfillment?.courier,
+      destinationAddress: split.fulfillment?.destination_address,
+      destLat: split.fulfillment?.destination_lat,
+      destLng: split.fulfillment?.destination_lng
+    });
+  }
+};
+
 const handleSuccessfulPayment = async (sessionId, sessionMetadata = {}) => {
   const purchaseItems = await getPurchaseData(sessionId);
 
   const orderGroupId = purchaseItems[0]?.order_group_id;
+  let splitPlan = [];
+
   if (orderGroupId) {
+    const groupData = await getOrderGroupSplitPlan(orderGroupId).catch(() => null);
+    splitPlan = groupData?.split_plan || [];
     await updateOrderGroupStatus(orderGroupId);
+  }
+
+  if (sessionMetadata.checkout_mode === "unified_multi" && splitPlan.length) {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const paymentIntentId = typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : session.payment_intent?.id;
+
+    await executeUnifiedTransfers({ sessionId, paymentIntentId, splitPlan });
   }
 
   const pharmacyIds = [...new Set(purchaseItems.map((item) => item.pharmacy_id).filter(Boolean))];
@@ -300,7 +503,12 @@ const handleSuccessfulPayment = async (sessionId, sessionMetadata = {}) => {
     await recordPurchaseFees(sessionId, pharmacyId);
   }
 
-  await fulfillOrderLogistics(sessionId, purchaseItems, sessionMetadata);
+  if (splitPlan.length) {
+    await fulfillUnifiedLogistics(sessionId, purchaseItems, splitPlan);
+  } else {
+    await fulfillOrderLogistics(sessionId, purchaseItems, sessionMetadata);
+  }
+
   await scanPriceAlerts().catch((err) => console.error("Price alert scan failed:", err.message));
 
   for (const item of purchaseItems) {
