@@ -20,6 +20,9 @@ import {
 } from "./billingService.js";
 import { getPharmacyPaymentConfig, handleAccountUpdated } from "./connectService.js";
 import { fulfillSubscriptionRenewal } from "./subscriptionService.js";
+import { createDeliveryForOrder } from "./deliveryService.js";
+import { createPickupForOrder } from "./pickupService.js";
+import { scanPriceAlerts } from "./priceAlertService.js";
 
 dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_KEY);
@@ -57,7 +60,7 @@ const groupByPharmacy = (cartItems) => {
   return groups;
 };
 
-const createSessionForItems = async (userId, cartItems, couponCode = null) => {
+const createSessionForItems = async (userId, cartItems, couponCode = null, fulfillment = {}) => {
   let lineItems = buildLineItems(cartItems);
   let coupon = null;
 
@@ -73,6 +76,21 @@ const createSessionForItems = async (userId, cartItems, couponCode = null) => {
     lineItems = buildLineItems(cartItems, ratio);
   }
 
+  const deliveryFee = fulfillment.fulfillment_mode === "delivery"
+    ? Number(fulfillment.delivery_fee || 0)
+    : 0;
+
+  if (deliveryFee > 0) {
+    lineItems.push({
+      price_data: {
+        currency: "brl",
+        product_data: { name: "Entrega" },
+        unit_amount: toStripeAmount(deliveryFee)
+      },
+      quantity: 1
+    });
+  }
+
   const pharmacyId = cartItems[0]?.Medicine?.pharmacy_id;
   const paymentConfig = await getPharmacyPaymentConfig(pharmacyId);
 
@@ -81,7 +99,16 @@ const createSessionForItems = async (userId, cartItems, couponCode = null) => {
     line_items: lineItems,
     mode: "payment",
     success_url: `${process.env.SUCCESS_URL}?sessionId={CHECKOUT_SESSION_ID}`,
-    cancel_url: process.env.CANCEL_URL
+    cancel_url: process.env.CANCEL_URL,
+    metadata: {
+      fulfillment_mode: fulfillment.fulfillment_mode || "delivery",
+      delivery_fee: String(deliveryFee),
+      destination_address: fulfillment.destination_address || "",
+      destination_lat: fulfillment.destination_lat ? String(fulfillment.destination_lat) : "",
+      destination_lng: fulfillment.destination_lng ? String(fulfillment.destination_lng) : "",
+      courier: fulfillment.courier || "local",
+      eta_minutes: fulfillment.eta_minutes ? String(fulfillment.eta_minutes) : ""
+    }
   };
 
   if (paymentConfig) {
@@ -109,7 +136,9 @@ const createSessionForItems = async (userId, cartItems, couponCode = null) => {
     payment_status: "pending",
     payment_method: "Cartão de credito",
     order_status: "pending_payment",
-    pharmacy_id: item.Medicine.pharmacy_id || null
+    pharmacy_id: item.Medicine.pharmacy_id || null,
+    fulfillment_mode: fulfillment.fulfillment_mode || "delivery",
+    delivery_fee: deliveryFee
   }));
 
   const { error: purchaseError } = await sdb.from("Purchase").insert(purchaseData);
@@ -120,7 +149,17 @@ const createSessionForItems = async (userId, cartItems, couponCode = null) => {
   return session.url;
 };
 
-const cartCheckoutSession = async (userId, couponCode) => {
+const cartCheckoutSession = async (userId, options = {}) => {
+  const {
+    couponCode,
+    fulfillment_mode = "delivery",
+    destination_lat,
+    destination_lng,
+    destination_address,
+    courier = "local",
+    delivery_quotes = {}
+  } = options;
+
   const { data: cartItems, error: cartError } = await sdb
     .from("Cart")
     .select(`
@@ -138,9 +177,27 @@ const cartCheckoutSession = async (userId, couponCode) => {
   const groups = groupByPharmacy(cartItems);
   const pharmacyKeys = Object.keys(groups);
 
+  const buildFulfillment = (pharmacyKey) => {
+    const quote = delivery_quotes[pharmacyKey] || {};
+    return {
+      fulfillment_mode,
+      delivery_fee: quote.price || 0,
+      eta_minutes: quote.eta_minutes,
+      courier: quote.courier || courier,
+      destination_lat,
+      destination_lng,
+      destination_address
+    };
+  };
+
   if (pharmacyKeys.length === 1) {
-    const url = await createSessionForItems(userId, cartItems, couponCode);
-    return { mode: "single", url };
+    const url = await createSessionForItems(
+      userId,
+      cartItems,
+      couponCode,
+      buildFulfillment(pharmacyKeys[0])
+    );
+    return { mode: "single", url, fulfillment_mode };
   }
 
   const sessions = [];
@@ -148,7 +205,12 @@ const cartCheckoutSession = async (userId, couponCode) => {
     const key = pharmacyKeys[i];
     const items = groups[key];
     const pharmacyName = items[0]?.Medicine?.Pharmacy?.name || "Farmácia";
-    const url = await createSessionForItems(userId, items, i === 0 ? couponCode : null);
+    const url = await createSessionForItems(
+      userId,
+      items,
+      i === 0 ? couponCode : null,
+      buildFulfillment(key)
+    );
     sessions.push({ pharmacyId: key, pharmacyName, url, items: items.length });
   }
 
@@ -187,7 +249,7 @@ const updatePaymentStatus = async (sessionId) => {
   await updatePurchaseStatus(sessionId, status);
 
   if (status === "paid" && !alreadyPaid) {
-    await handleSuccessfulPayment(sessionId);
+    await handleSuccessfulPayment(sessionId, session.metadata || {});
   }
 
   return status;
@@ -203,13 +265,47 @@ const updatePurchaseStatus = async (sessionId, status) => {
   if (error) throw new Error(error.message);
 };
 
-const handleSuccessfulPayment = async (sessionId) => {
+const fulfillOrderLogistics = async (sessionId, purchaseItems, sessionMetadata = {}) => {
+  const first = purchaseItems[0];
+  if (!first) return;
+
+  const fulfillmentMode = first.fulfillment_mode || sessionMetadata.fulfillment_mode || "delivery";
+  const pharmacyId = first.pharmacy_id;
+
+  if (fulfillmentMode === "pickup" && pharmacyId) {
+    await createPickupForOrder({
+      purchaseId: sessionId,
+      userId: first.user_id,
+      pharmacyId
+    });
+    return;
+  }
+
+  if (fulfillmentMode === "delivery" && pharmacyId) {
+    await createDeliveryForOrder({
+      purchaseId: sessionId,
+      userId: first.user_id,
+      pharmacyId,
+      quotedPrice: Number(first.delivery_fee || sessionMetadata.delivery_fee || 0),
+      etaMinutes: Number(sessionMetadata.eta_minutes || 60),
+      courier: sessionMetadata.courier || "local",
+      destinationAddress: sessionMetadata.destination_address,
+      destLat: sessionMetadata.destination_lat ? Number(sessionMetadata.destination_lat) : null,
+      destLng: sessionMetadata.destination_lng ? Number(sessionMetadata.destination_lng) : null
+    });
+  }
+};
+
+const handleSuccessfulPayment = async (sessionId, sessionMetadata = {}) => {
   const purchaseItems = await getPurchaseData(sessionId);
 
   const pharmacyIds = [...new Set(purchaseItems.map((item) => item.pharmacy_id).filter(Boolean))];
   for (const pharmacyId of pharmacyIds) {
     await recordPurchaseFees(sessionId, pharmacyId);
   }
+
+  await fulfillOrderLogistics(sessionId, purchaseItems, sessionMetadata);
+  await scanPriceAlerts().catch((err) => console.error("Price alert scan failed:", err.message));
 
   for (const item of purchaseItems) {
     const stock = await getMedicineStock(item.medicine_id);
@@ -238,7 +334,7 @@ const handleSuccessfulPayment = async (sessionId) => {
 const getPurchaseData = async (sessionId) => {
   const { data, error } = await sdb
     .from("Purchase")
-    .select("user_id, medicine_id, quantity, pharmacy_id")
+    .select("user_id, medicine_id, quantity, pharmacy_id, fulfillment_mode, delivery_fee")
     .eq("id", sessionId);
 
   if (error || !data?.length) {

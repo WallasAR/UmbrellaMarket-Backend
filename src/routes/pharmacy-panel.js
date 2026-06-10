@@ -12,7 +12,8 @@ import {
   productCreateSchema,
   productUpdateSchema,
   prescriptionReviewSchema,
-  kycUploadSchema
+  kycUploadSchema,
+  pickupConfirmSchema
 } from "../schemas/index.js";
 import { startOnboarding, getStatus } from "../controllers/connectController.js";
 import { uploadDocument, listDocuments } from "../controllers/kycController.js";
@@ -33,7 +34,12 @@ import {
   scanAlerts,
   orders,
   setOrderStatus,
-  setOperationalStatus
+  setOperationalStatus,
+  confirmPickupOrder,
+  productPriceBenchmark,
+  productPriceHistory,
+  deliveries,
+  advanceDelivery
 } from "../controllers/pharmacyPanelController.js";
 import { listPharmacyPending, reviewPharmacyPrescription } from "../controllers/prescriptionController.js";
 import { getPharmacyFinancials, buildPharmacyFinancialCsv } from "../services/financialService.js";
@@ -109,5 +115,11 @@ router.get("/connect/status", requirePharmacyOwner, getStatus);
 
 router.get("/kyc/documents", requirePharmacyOwner, listDocuments);
 router.post("/kyc/documents", requirePharmacyOwner, validateBody(kycUploadSchema), uploadDocument);
+
+router.get("/products/:id/price-benchmark", requirePharmacyPermission("financial"), productPriceBenchmark);
+router.get("/products/:id/price-history", requirePharmacyPermission("financial"), productPriceHistory);
+router.get("/deliveries", requirePharmacyPermission("orders"), deliveries);
+router.post("/deliveries/:id/advance", requirePharmacyPermission("orders"), advanceDelivery);
+router.post("/pickup/confirm", requirePharmacyPermission("orders"), validateBody(pickupConfirmSchema), confirmPickupOrder);
 
 export default router;

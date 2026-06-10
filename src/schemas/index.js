@@ -51,12 +51,44 @@ const cartItemSchema = z.object({
 });
 
 const checkoutCartSchema = z.object({
-  couponCode: z.string().optional()
+  couponCode: z.string().optional(),
+  fulfillment_mode: z.enum(["delivery", "pickup"]).optional().default("delivery"),
+  destination_lat: z.coerce.number().min(-90).max(90).optional(),
+  destination_lng: z.coerce.number().min(-180).max(180).optional(),
+  destination_address: z.string().optional(),
+  courier: z.enum(["local", "uber"]).optional(),
+  delivery_quotes: z.record(z.string(), z.object({
+    price: z.coerce.number().nonnegative(),
+    eta_minutes: z.coerce.number().int().positive().optional(),
+    courier: z.string().optional()
+  })).optional()
 });
 
 const checkoutItemSchema = z.object({
   quantity: z.coerce.number().int().positive().default(1),
-  couponCode: z.string().optional()
+  couponCode: z.string().optional(),
+  fulfillment_mode: z.enum(["delivery", "pickup"]).optional(),
+  destination_lat: z.coerce.number().min(-90).max(90).optional(),
+  destination_lng: z.coerce.number().min(-180).max(180).optional(),
+  destination_address: z.string().optional()
+});
+
+const deliveryQuoteSchema = z.object({
+  pharmacy_ids: z.array(z.string().uuid()).min(1),
+  destination_lat: z.coerce.number().min(-90).max(90),
+  destination_lng: z.coerce.number().min(-180).max(180),
+  courier: z.enum(["local", "uber"]).optional()
+});
+
+const priceAlertSchema = z.object({
+  medicine_id: z.coerce.number().int().positive(),
+  target_price: z.coerce.number().positive(),
+  notify_push: z.boolean().optional(),
+  notify_email: z.boolean().optional()
+});
+
+const pickupConfirmSchema = z.object({
+  pickup_code: z.string().min(4).max(20)
 });
 
 const reviewSchema = z.object({
@@ -164,6 +196,9 @@ export {
   cartItemSchema,
   checkoutCartSchema,
   checkoutItemSchema,
+  deliveryQuoteSchema,
+  priceAlertSchema,
+  pickupConfirmSchema,
   reviewSchema,
   couponValidateSchema,
   prescriptionSchema,

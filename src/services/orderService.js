@@ -1,4 +1,6 @@
 import sdb from "./database.js";
+import { getDeliveryByPurchase } from "./deliveryService.js";
+import { getPickupByPurchase } from "./pickupService.js";
 
 const listUserOrders = async (userId) => {
   const { data, error } = await sdb
@@ -13,6 +15,8 @@ const listUserOrders = async (userId) => {
       payment_method,
       order_status,
       pharmacy_id,
+      fulfillment_mode,
+      delivery_fee,
       created_at,
       Medicine (id, name, Images (thumb_img))
     `)
@@ -29,6 +33,8 @@ const listUserOrders = async (userId) => {
         payment_status: item.payment_status,
         order_status: item.order_status || 'pending_payment',
         payment_method: item.payment_method,
+        fulfillment_mode: item.fulfillment_mode || 'delivery',
+        delivery_fee: Number(item.delivery_fee || 0),
         created_at: item.created_at,
         total_price: 0,
         items: []
@@ -38,7 +44,16 @@ const listUserOrders = async (userId) => {
     grouped[item.id].total_price += Number(item.total_price || 0);
   }
 
-  return Object.values(grouped);
+  const orders = Object.values(grouped);
+  for (const order of orders) {
+    if (order.fulfillment_mode === 'pickup') {
+      order.pickup = await getPickupByPurchase(order.sessionId, userId);
+    } else if (order.payment_status === 'paid') {
+      order.delivery = await getDeliveryByPurchase(order.sessionId, userId);
+    }
+  }
+
+  return orders;
 };
 
 const getUserOrder = async (userId, sessionId) => {

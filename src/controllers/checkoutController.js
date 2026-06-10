@@ -3,9 +3,8 @@ import { cartCheckoutSession, itemCheckoutSession, updatePaymentStatus } from ".
 const cartCheckout = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { couponCode } = req.body;
     if (!userId) throw new Error("User not found");
-    const result = await cartCheckoutSession(userId, couponCode);
+    const result = await cartCheckoutSession(userId, req.body);
     res.status(200).json(result);
   } catch (error) {
     next(error);

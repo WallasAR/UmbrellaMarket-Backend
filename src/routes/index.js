@@ -15,6 +15,9 @@ import reviewRoutes from "./reviews.js";
 import subscriptionRoutes from "./subscriptions.js";
 import pharmacyPanelRoutes from "./pharmacy-panel.js";
 import onboardingRoutes from "./onboarding.js";
+import deliveryRoutes from "./delivery.js";
+import pickupRoutes from "./pickup.js";
+import priceAlertRoutes from "./price-alerts.js";
 
 const router = express.Router();
 
@@ -33,5 +36,8 @@ router.use("/reviews", reviewRoutes);
 router.use("/subscriptions", subscriptionRoutes);
 router.use("/pharmacy", pharmacyPanelRoutes);
 router.use("/onboarding", onboardingRoutes);
+router.use("/delivery", deliveryRoutes);
+router.use("/pickup", pickupRoutes);
+router.use("/price-alerts", priceAlertRoutes);
 
 export default router;

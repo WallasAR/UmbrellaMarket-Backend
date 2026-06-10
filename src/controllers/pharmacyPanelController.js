@@ -4,6 +4,9 @@ import {
   createBillingPortal
 } from "../services/billingService.js";
 import { logAudit } from "../services/auditService.js";
+import { confirmPickup } from "../services/pickupService.js";
+import { advanceDeliveryStatus, listPharmacyDeliveries } from "../services/deliveryService.js";
+import { getPriceBenchmark, getProductPriceHistory, recordPriceSnapshot } from "../services/priceHistoryService.js";
 import sdb from "../services/database.js";
 import {
   getDashboard,
@@ -43,6 +46,13 @@ const products = async (req, res, next) => {
 const addProduct = async (req, res, next) => {
   try {
     const data = await createProduct(req.pharmacyId, req.body);
+    await recordPriceSnapshot({
+      medicineId: data.id,
+      pharmacyId: req.pharmacyId,
+      price: data.price,
+      discount: data.discount || 0,
+      source: "manual"
+    });
     res.status(201).json(data);
   } catch (error) {
     next(error);
@@ -61,6 +71,13 @@ const editProduct = async (req, res, next) => {
         entityId: req.params.id,
         payload: { price: req.body.price, discount: req.body.discount, pharmacy_id: req.pharmacyId },
         ipAddress: req.ip
+      });
+      await recordPriceSnapshot({
+        medicineId: Number(req.params.id),
+        pharmacyId: req.pharmacyId,
+        price: data.price,
+        discount: data.discount || 0,
+        source: "manual"
       });
     }
 
@@ -188,6 +205,59 @@ const billingPortal = async (req, res, next) => {
   }
 };
 
+const confirmPickupOrder = async (req, res, next) => {
+  try {
+    const pickup = await confirmPickup({
+      pickupCode: req.body.pickup_code,
+      pharmacyId: req.pharmacyId,
+      staffId: req.user.id
+    });
+    res.status(200).json(pickup);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const productPriceBenchmark = async (req, res, next) => {
+  try {
+    const data = await getPriceBenchmark(Number(req.params.id), req.pharmacyId);
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const productPriceHistory = async (req, res, next) => {
+  try {
+    const data = await getProductPriceHistory(
+      Number(req.params.id),
+      req.pharmacyId,
+      req.query.period || "90d"
+    );
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deliveries = async (req, res, next) => {
+  try {
+    const data = await listPharmacyDeliveries(req.pharmacyId);
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const advanceDelivery = async (req, res, next) => {
+  try {
+    const data = await advanceDeliveryStatus(req.params.id);
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   billing,
   billingCheckout,
@@ -205,5 +275,10 @@ export {
   scanAlerts,
   orders,
   setOrderStatus,
-  setOperationalStatus
+  setOperationalStatus,
+  confirmPickupOrder,
+  productPriceBenchmark,
+  productPriceHistory,
+  deliveries,
+  advanceDelivery
 };
