@@ -2,6 +2,7 @@ import sdb from "./database.js";
 import { applyProductDiscount } from "../utils/pricing.js";
 import { getActiveBoosts, applyBoostOrdering } from "./boostService.js";
 import { listNearbyPharmacies } from "./pharmacyService.js";
+import { fuzzySearchProducts } from "./symptomService.js";
 
 const PRODUCT_SELECT = `
   *,
@@ -11,20 +12,97 @@ const PRODUCT_SELECT = `
 
 const parseQueryBoolean = (value) => value === true || value === "true";
 
-const fetchProducts = async ({
-  discount,
-  stock,
-  q,
-  category,
-  minPrice,
-  maxPrice,
-  pharmacyId,
-  sort,
-  symptom,
-  lat,
-  lng,
-  radiusKm
-}) => {
+const applyInMemoryFilters = (products, filters) => {
+  let result = products;
+
+  if (parseQueryBoolean(filters.discount)) {
+    result = result.filter((item) => Number(item.discount || 0) > 0);
+  }
+  if (parseQueryBoolean(filters.stock)) {
+    result = result.filter((item) => Number(item.stock || 0) > 0);
+  }
+  if (filters.category) {
+    result = result.filter((item) => item.category === filters.category);
+  }
+  if (filters.pharmacyId) {
+    result = result.filter((item) => item.pharmacy_id === filters.pharmacyId);
+  }
+  if (filters.symptom) {
+    const slug = filters.symptom.toLowerCase();
+    result = result.filter((item) => (item.symptoms || []).includes(slug));
+  }
+  if (filters.minPrice) {
+    result = result.filter((item) => Number(item.price) >= Number(filters.minPrice));
+  }
+  if (filters.maxPrice) {
+    result = result.filter((item) => Number(item.price) <= Number(filters.maxPrice));
+  }
+
+  switch (filters.sort) {
+    case "price_asc":
+      result = [...result].sort((a, b) => Number(a.price) - Number(b.price));
+      break;
+    case "price_desc":
+      result = [...result].sort((a, b) => Number(b.price) - Number(a.price));
+      break;
+    case "discount_desc":
+      result = [...result].sort((a, b) => Number(b.discount || 0) - Number(a.discount || 0));
+      break;
+    default:
+      result = [...result].sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  }
+
+  return result;
+};
+
+const finalizeProducts = async (products, { lat, lng, radiusKm, sort }) => {
+  let result = products;
+
+  if (lat != null && lng != null) {
+    const nearby = await listNearbyPharmacies({
+      lat: Number(lat),
+      lng: Number(lng),
+      radiusKm: Number(radiusKm || 15)
+    });
+    const nearbyIds = new Set(nearby.map((p) => p.id));
+    result = result.filter((item) => nearbyIds.has(item.pharmacy_id));
+    result.sort((a, b) => {
+      const distA = nearby.find((p) => p.id === a.pharmacy_id)?.distance_km || 999;
+      const distB = nearby.find((p) => p.id === b.pharmacy_id)?.distance_km || 999;
+      return distA - distB;
+    });
+  }
+
+  if (!sort || sort === "name_asc") {
+    const boosts = await getActiveBoosts().catch(() => []);
+    return applyBoostOrdering(result, boosts);
+  }
+
+  return result;
+};
+
+const fetchProducts = async (filters) => {
+  const {
+    discount,
+    stock,
+    q,
+    category,
+    minPrice,
+    maxPrice,
+    pharmacyId,
+    sort,
+    symptom,
+    lat,
+    lng,
+    radiusKm
+  } = filters;
+
+  if (q) {
+    const fuzzyResults = await fuzzySearchProducts(q, { limit: 80 });
+    const filtered = applyInMemoryFilters(fuzzyResults, filters);
+    return finalizeProducts(filtered, { lat, lng, radiusKm, sort });
+  }
+
   let query = sdb
     .from("Medicine")
     .select(PRODUCT_SELECT);
@@ -36,11 +114,6 @@ const fetchProducts = async ({
   if (symptom) query = query.contains("symptoms", [symptom.toLowerCase()]);
   if (minPrice) query = query.gte("price", Number(minPrice));
   if (maxPrice) query = query.lte("price", Number(maxPrice));
-  if (q) {
-    query = query.or(
-      `name.ilike.%${q}%,description.ilike.%${q}%,active_ingredient.ilike.%${q}%`
-    );
-  }
 
   switch (sort) {
     case "price_asc":
@@ -60,29 +133,7 @@ const fetchProducts = async ({
 
   if (error) throw new Error(error.message);
 
-  let products = data || [];
-
-  if (lat != null && lng != null) {
-    const nearby = await listNearbyPharmacies({
-      lat: Number(lat),
-      lng: Number(lng),
-      radiusKm: Number(radiusKm || 15)
-    });
-    const nearbyIds = new Set(nearby.map((p) => p.id));
-    products = products.filter((item) => nearbyIds.has(item.pharmacy_id));
-    products.sort((a, b) => {
-      const distA = nearby.find((p) => p.id === a.pharmacy_id)?.distance_km || 999;
-      const distB = nearby.find((p) => p.id === b.pharmacy_id)?.distance_km || 999;
-      return distA - distB;
-    });
-  }
-
-  if (!sort || sort === "name_asc") {
-    const boosts = await getActiveBoosts().catch(() => []);
-    return applyBoostOrdering(products, boosts);
-  }
-
-  return products;
+  return finalizeProducts(data || [], { lat, lng, radiusKm, sort });
 };
 
 const fetchProduct = async (id) => {

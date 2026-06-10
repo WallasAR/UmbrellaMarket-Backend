@@ -35,11 +35,39 @@ const searchBySymptom = async (query, { limit = 20 } = {}) => {
   };
 };
 
-const fuzzySearchProducts = async (q, { limit = 20 } = {}) => {
+const fetchProductsByIds = async (ids) => {
+  if (!ids.length) return [];
+
   const { data, error } = await sdb
     .from("Medicine")
     .select(PRODUCT_SELECT)
-    .or(`name.ilike.%${q}%,active_ingredient.ilike.%${q}%,description.ilike.%${q}%`)
+    .in("id", ids)
+    .gt("stock", 0);
+
+  if (error) throw new Error(error.message);
+
+  const byId = new Map((data || []).map((item) => [item.id, item]));
+  return ids.map((id) => byId.get(id)).filter(Boolean);
+};
+
+const fuzzySearchProducts = async (q, { limit = 20 } = {}) => {
+  const search = q?.trim();
+  if (!search) return [];
+
+  const { data: ranked, error: rpcError } = await sdb.rpc("fuzzy_search_medicine_ids", {
+    search,
+    result_limit: limit
+  });
+
+  if (!rpcError && ranked?.length) {
+    const ids = ranked.map((row) => row.id);
+    return fetchProductsByIds(ids);
+  }
+
+  const { data, error } = await sdb
+    .from("Medicine")
+    .select(PRODUCT_SELECT)
+    .or(`name.ilike.%${search}%,active_ingredient.ilike.%${search}%,description.ilike.%${search}%`)
     .gt("stock", 0)
     .order("name", { ascending: true })
     .limit(limit);
