@@ -11,13 +11,15 @@ import {
   postPrescriptionScan,
   postPrescriptionToCart,
   getSessions,
-  getSessionMessages
+  getSessionMessages,
+  getCartInsights
 } from "../controllers/copilotController.js";
 
 const router = express.Router();
 
 router.get("/sessions", autenticateToken, getSessions);
 router.get("/sessions/:id/messages", autenticateToken, getSessionMessages);
+router.get("/cart-insights", autenticateToken, getCartInsights);
 router.post("/chat", autenticateToken, validateBody(copilotChatSchema), postChat);
 router.post("/prescription-scan", autenticateToken, validateBody(prescriptionScanSchema), postPrescriptionScan);
 router.post("/prescription-to-cart", autenticateToken, validateBody(prescriptionToCartSchema), postPrescriptionToCart);

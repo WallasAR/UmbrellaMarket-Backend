@@ -15,6 +15,7 @@ const getCart = async (userId) => {
         description,
         pharmacy_id,
         requires_prescription,
+        active_ingredient,
         Images (thumb_img),
         Pharmacy (id, name)
       )

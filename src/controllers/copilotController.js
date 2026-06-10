@@ -1,4 +1,5 @@
 import { chat, scanPrescription, prescriptionToCart } from "../services/copilotService.js";
+import { analyzeCart } from "../services/cartInsightService.js";
 import { listUserSessions, listSessionMessages } from "../services/copilotSessionService.js";
 
 const postChat = async (req, res, next) => {
@@ -60,10 +61,20 @@ const getSessionMessages = async (req, res, next) => {
   }
 };
 
+const getCartInsights = async (req, res, next) => {
+  try {
+    const data = await analyzeCart(req.user.id);
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   postChat,
   postPrescriptionScan,
   postPrescriptionToCart,
   getSessions,
-  getSessionMessages
+  getSessionMessages,
+  getCartInsights
 };
