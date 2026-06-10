@@ -17,6 +17,7 @@ const listUserOrders = async (userId) => {
       pharmacy_id,
       fulfillment_mode,
       delivery_fee,
+      order_group_id,
       created_at,
       Medicine (id, name, Images (thumb_img))
     `)
@@ -35,6 +36,7 @@ const listUserOrders = async (userId) => {
         payment_method: item.payment_method,
         fulfillment_mode: item.fulfillment_mode || 'delivery',
         delivery_fee: Number(item.delivery_fee || 0),
+        order_group_id: item.order_group_id || null,
         created_at: item.created_at,
         total_price: 0,
         items: []

@@ -5,6 +5,7 @@ import { applyProductDiscount, toStripeAmount } from "../utils/pricing.js";
 import { createNotification } from "./notificationService.js";
 import { sendEmail } from "./emailService.js";
 import { recordPurchaseFees } from "./financialService.js";
+import { fulfillOrderLogistics } from "./orderLogisticsService.js";
 
 dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_KEY);
@@ -195,6 +196,16 @@ const fulfillSubscriptionRenewal = async (invoice) => {
   if (medicine.pharmacy_id) {
     await recordPurchaseFees(purchaseId, medicine.pharmacy_id);
   }
+
+  await fulfillOrderLogistics({
+    purchaseId,
+    userId: subscription.user_id,
+    pharmacyId: medicine.pharmacy_id,
+    fulfillmentMode: "delivery",
+    deliveryFee: 0,
+    etaMinutes: 60,
+    courier: "local"
+  });
 
   await sdb
     .from("Medicine")

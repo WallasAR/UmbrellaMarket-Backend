@@ -20,9 +20,9 @@ import {
 } from "./billingService.js";
 import { getPharmacyPaymentConfig, handleAccountUpdated } from "./connectService.js";
 import { fulfillSubscriptionRenewal } from "./subscriptionService.js";
-import { createDeliveryForOrder } from "./deliveryService.js";
-import { createPickupForOrder } from "./pickupService.js";
 import { scanPriceAlerts } from "./priceAlertService.js";
+import { createOrderGroup, updateOrderGroupStatus } from "./orderGroupService.js";
+import { fulfillOrderLogistics as runOrderLogistics } from "./orderLogisticsService.js";
 
 dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_KEY);
@@ -60,7 +60,7 @@ const groupByPharmacy = (cartItems) => {
   return groups;
 };
 
-const createSessionForItems = async (userId, cartItems, couponCode = null, fulfillment = {}) => {
+const createSessionForItems = async (userId, cartItems, couponCode = null, fulfillment = {}, orderGroupId = null) => {
   let lineItems = buildLineItems(cartItems);
   let coupon = null;
 
@@ -138,7 +138,8 @@ const createSessionForItems = async (userId, cartItems, couponCode = null, fulfi
     order_status: "pending_payment",
     pharmacy_id: item.Medicine.pharmacy_id || null,
     fulfillment_mode: fulfillment.fulfillment_mode || "delivery",
-    delivery_fee: deliveryFee
+    delivery_fee: deliveryFee,
+    order_group_id: orderGroupId || null
   }));
 
   const { error: purchaseError } = await sdb.from("Purchase").insert(purchaseData);
@@ -201,6 +202,8 @@ const cartCheckoutSession = async (userId, options = {}) => {
   }
 
   const sessions = [];
+  const orderGroup = await createOrderGroup(userId);
+
   for (let i = 0; i < pharmacyKeys.length; i++) {
     const key = pharmacyKeys[i];
     const items = groups[key];
@@ -209,12 +212,13 @@ const cartCheckoutSession = async (userId, options = {}) => {
       userId,
       items,
       i === 0 ? couponCode : null,
-      buildFulfillment(key)
+      buildFulfillment(key),
+      orderGroup.id
     );
     sessions.push({ pharmacyId: key, pharmacyName, url, items: items.length });
   }
 
-  return { mode: "multi", sessions };
+  return { mode: "multi", sessions, order_group_id: orderGroup.id };
 };
 
 const itemCheckoutSession = async (userId, productId, quantity, couponCode) => {
@@ -269,35 +273,27 @@ const fulfillOrderLogistics = async (sessionId, purchaseItems, sessionMetadata =
   const first = purchaseItems[0];
   if (!first) return;
 
-  const fulfillmentMode = first.fulfillment_mode || sessionMetadata.fulfillment_mode || "delivery";
-  const pharmacyId = first.pharmacy_id;
-
-  if (fulfillmentMode === "pickup" && pharmacyId) {
-    await createPickupForOrder({
-      purchaseId: sessionId,
-      userId: first.user_id,
-      pharmacyId
-    });
-    return;
-  }
-
-  if (fulfillmentMode === "delivery" && pharmacyId) {
-    await createDeliveryForOrder({
-      purchaseId: sessionId,
-      userId: first.user_id,
-      pharmacyId,
-      quotedPrice: Number(first.delivery_fee || sessionMetadata.delivery_fee || 0),
-      etaMinutes: Number(sessionMetadata.eta_minutes || 60),
-      courier: sessionMetadata.courier || "local",
-      destinationAddress: sessionMetadata.destination_address,
-      destLat: sessionMetadata.destination_lat ? Number(sessionMetadata.destination_lat) : null,
-      destLng: sessionMetadata.destination_lng ? Number(sessionMetadata.destination_lng) : null
-    });
-  }
+  await runOrderLogistics({
+    purchaseId: sessionId,
+    userId: first.user_id,
+    pharmacyId: first.pharmacy_id,
+    fulfillmentMode: first.fulfillment_mode || sessionMetadata.fulfillment_mode || "delivery",
+    deliveryFee: first.delivery_fee || sessionMetadata.delivery_fee,
+    etaMinutes: sessionMetadata.eta_minutes,
+    courier: sessionMetadata.courier,
+    destinationAddress: sessionMetadata.destination_address,
+    destLat: sessionMetadata.destination_lat,
+    destLng: sessionMetadata.destination_lng
+  });
 };
 
 const handleSuccessfulPayment = async (sessionId, sessionMetadata = {}) => {
   const purchaseItems = await getPurchaseData(sessionId);
+
+  const orderGroupId = purchaseItems[0]?.order_group_id;
+  if (orderGroupId) {
+    await updateOrderGroupStatus(orderGroupId);
+  }
 
   const pharmacyIds = [...new Set(purchaseItems.map((item) => item.pharmacy_id).filter(Boolean))];
   for (const pharmacyId of pharmacyIds) {
@@ -334,7 +330,7 @@ const handleSuccessfulPayment = async (sessionId, sessionMetadata = {}) => {
 const getPurchaseData = async (sessionId) => {
   const { data, error } = await sdb
     .from("Purchase")
-    .select("user_id, medicine_id, quantity, pharmacy_id, fulfillment_mode, delivery_fee")
+    .select("user_id, medicine_id, quantity, pharmacy_id, fulfillment_mode, delivery_fee, order_group_id")
     .eq("id", sessionId);
 
   if (error || !data?.length) {
