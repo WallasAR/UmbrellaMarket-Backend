@@ -3,8 +3,13 @@ import { getActiveBoosts, recordSponsoredClick } from '../services/boostService.
 
 const getProducts = async (req, res, next) => {
   try {
-    const { discount, stock, q, category, minPrice, maxPrice, pharmacyId, sort } = req.query;
-    const products = await fetchProducts({ discount, stock, q, category, minPrice, maxPrice, pharmacyId, sort });
+    const {
+      discount, stock, q, category, minPrice, maxPrice, pharmacyId, sort, symptom, lat, lng, radius_km
+    } = req.query;
+    const products = await fetchProducts({
+      discount, stock, q, category, minPrice, maxPrice, pharmacyId, sort,
+      symptom, lat, lng, radiusKm: radius_km
+    });
     res.status(200).json(products);
   } catch (error) {
     next(error);

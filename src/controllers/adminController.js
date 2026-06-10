@@ -10,6 +10,7 @@ import { logAudit } from "../services/auditService.js";
 import { listAllOrders, updateOrderStatus } from "../services/orderService.js";
 import { listCoupons, createCoupon } from "../services/couponService.js";
 import { createPharmacy } from "../services/pharmacyService.js";
+import { listAuditLogs } from "../services/auditService.js";
 
 const dashboard = async (req, res, next) => {
   try {
@@ -120,6 +121,19 @@ const addPharmacy = async (req, res, next) => {
   }
 };
 
+const auditLogs = async (req, res, next) => {
+  try {
+    const logs = await listAuditLogs({
+      limit: Number(req.query.limit) || 50,
+      entityType: req.query.entity_type,
+      actorId: req.query.actor_id
+    });
+    res.status(200).json(logs);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   dashboard,
   createMedicine,
@@ -131,5 +145,6 @@ export {
   setOrderStatus,
   coupons,
   addCoupon,
-  addPharmacy
+  addPharmacy,
+  auditLogs
 };

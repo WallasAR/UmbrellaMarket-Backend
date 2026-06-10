@@ -12,7 +12,8 @@ import {
   setOrderStatus,
   coupons,
   addCoupon,
-  addPharmacy
+  addPharmacy,
+  auditLogs
 } from "../controllers/adminController.js";
 import { pending, approve, reject } from "../controllers/onboardingController.js";
 import { getPlatformFinancials, buildPlatformFinancialCsv } from "../services/financialService.js";
@@ -42,6 +43,7 @@ router.get("/coupons", coupons);
 router.post("/coupons", validateBody(couponCreateSchema), addCoupon);
 
 router.get("/users", requireRole("admin"), users);
+router.get("/audit-logs", requireRole("admin"), auditLogs);
 router.patch("/users/:id/role", requireRole("admin"), validateBody(roleUpdateSchema), setUserRole);
 router.post("/pharmacies", requireRole("admin"), addPharmacy);
 router.get("/pharmacies/pending", requireRole("admin"), pending);

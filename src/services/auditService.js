@@ -19,4 +19,19 @@ const logAudit = async ({ actorId, action, entityType, entityId, payload = {}, i
   }
 };
 
-export { logAudit };
+const listAuditLogs = async ({ limit = 50, entityType, actorId } = {}) => {
+  let query = sdb
+    .from("AuditLog")
+    .select("*, User:actor_id(email, name)")
+    .order("created_at", { ascending: false })
+    .limit(Math.min(limit, 200));
+
+  if (entityType) query = query.eq("entity_type", entityType);
+  if (actorId) query = query.eq("actor_id", actorId);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return data || [];
+};
+
+export { logAudit, listAuditLogs };

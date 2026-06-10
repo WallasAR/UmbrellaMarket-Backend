@@ -106,9 +106,18 @@ const advanceDeliveryStatus = async (deliveryId) => {
   const currentIndex = DELIVERY_STATUS_FLOW.indexOf(delivery.status);
   const nextStatus = DELIVERY_STATUS_FLOW[Math.min(currentIndex + 1, DELIVERY_STATUS_FLOW.length - 1)];
 
+  const updatePayload = {
+    status: nextStatus,
+    updated_at: new Date().toISOString()
+  };
+
+  if (nextStatus === "in_transit" && !delivery.tracking_url) {
+    updatePayload.tracking_url = `https://track.umbrella.local/${delivery.id.slice(0, 8)}`;
+  }
+
   const { data, error: updateError } = await sdb
     .from("Delivery")
-    .update({ status: nextStatus, updated_at: new Date().toISOString() })
+    .update(updatePayload)
     .eq("id", deliveryId)
     .select()
     .single();

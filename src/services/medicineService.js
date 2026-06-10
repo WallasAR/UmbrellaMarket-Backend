@@ -1,16 +1,30 @@
 import sdb from "./database.js";
 import { applyProductDiscount } from "../utils/pricing.js";
 import { getActiveBoosts, applyBoostOrdering } from "./boostService.js";
+import { listNearbyPharmacies } from "./pharmacyService.js";
 
 const PRODUCT_SELECT = `
   *,
   Images!left(thumb_img),
-  Pharmacy!left(id, name, city)
+  Pharmacy!left(id, name, city, latitude, longitude)
 `;
 
 const parseQueryBoolean = (value) => value === true || value === "true";
 
-const fetchProducts = async ({ discount, stock, q, category, minPrice, maxPrice, pharmacyId, sort }) => {
+const fetchProducts = async ({
+  discount,
+  stock,
+  q,
+  category,
+  minPrice,
+  maxPrice,
+  pharmacyId,
+  sort,
+  symptom,
+  lat,
+  lng,
+  radiusKm
+}) => {
   let query = sdb
     .from("Medicine")
     .select(PRODUCT_SELECT);
@@ -19,9 +33,14 @@ const fetchProducts = async ({ discount, stock, q, category, minPrice, maxPrice,
   if (parseQueryBoolean(stock)) query = query.gt("stock", 0);
   if (category) query = query.eq("category", category);
   if (pharmacyId) query = query.eq("pharmacy_id", pharmacyId);
+  if (symptom) query = query.contains("symptoms", [symptom.toLowerCase()]);
   if (minPrice) query = query.gte("price", Number(minPrice));
   if (maxPrice) query = query.lte("price", Number(maxPrice));
-  if (q) query = query.or(`name.ilike.%${q}%,description.ilike.%${q}%,active_ingredient.ilike.%${q}%`);
+  if (q) {
+    query = query.or(
+      `name.ilike.%${q}%,description.ilike.%${q}%,active_ingredient.ilike.%${q}%`
+    );
+  }
 
   switch (sort) {
     case "price_asc":
@@ -41,7 +60,23 @@ const fetchProducts = async ({ discount, stock, q, category, minPrice, maxPrice,
 
   if (error) throw new Error(error.message);
 
-  const products = data || [];
+  let products = data || [];
+
+  if (lat != null && lng != null) {
+    const nearby = await listNearbyPharmacies({
+      lat: Number(lat),
+      lng: Number(lng),
+      radiusKm: Number(radiusKm || 15)
+    });
+    const nearbyIds = new Set(nearby.map((p) => p.id));
+    products = products.filter((item) => nearbyIds.has(item.pharmacy_id));
+    products.sort((a, b) => {
+      const distA = nearby.find((p) => p.id === a.pharmacy_id)?.distance_km || 999;
+      const distB = nearby.find((p) => p.id === b.pharmacy_id)?.distance_km || 999;
+      return distA - distB;
+    });
+  }
+
   if (!sort || sort === "name_asc") {
     const boosts = await getActiveBoosts().catch(() => []);
     return applyBoostOrdering(products, boosts);
