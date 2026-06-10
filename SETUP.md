@@ -45,9 +45,29 @@ WHATSAPP_API_TOKEN=seu_token
 WHATSAPP_CHANNEL=umbrella-alerts
 
 PHARMACY_PANEL_URL=http://localhost:4200/pharmacy
+
+# Cron de alertas de preço (opcional — necessário para POST /api/cron/price-alerts)
+CRON_SECRET=
+
+# Copilot — OCR de receita e chat com IA (opcional)
+OPENAI_API_KEY=
+OPENAI_CHAT_MODEL=gpt-4o-mini
+
+# Uber Direct — cotação/agendamento real (opcional; sem credenciais usa modo simulado)
+UBER_CLIENT_ID=
+UBER_CLIENT_SECRET=
+UBER_CUSTOMER_ID=
+UBER_TOKEN_URL=https://login.uber.com/oauth/v2/token
+UBER_API_BASE=https://api.uber.com/v1
+
+# 99 Entrega — cotação/agendamento real (opcional; sem credenciais usa modo simulado)
+NINETYNINE_API_KEY=
+NINETYNINE_API_URL=https://api.99app.com/v1/logistics
 ```
 
-SMTP e WhatsApp são opcionais. Se não estiverem configurados, os envios são ignorados com log no console.
+**Onde configurar:** todas as variáveis acima são do **backend** (arquivo `.env` local ou painel do Render no Web Service da API). O frontend Angular só precisa de `apiUrl` em `src/environments/`.
+
+SMTP, WhatsApp, OpenAI, couriers e cron são opcionais. Se não estiverem configurados, os fluxos usam fallback (log no console, busca local no copilot, cotação simulada de frete, cron retorna 503).
 
 ## Banco de dados
 
@@ -62,6 +82,15 @@ migrations/005_pharmacy_billing.sql
 migrations/006_push_notifications.sql
 migrations/007_medicine_pharmacy_relationship.sql
 migrations/008_catalog_rls_and_stock.sql
+migrations/009_pharmacy_geo_and_audit.sql
+migrations/010_phase1_connect_comparator_kyc.sql
+migrations/011_delivery_pickup_price.sql
+migrations/012_phase3_copilot_symptoms_boost.sql
+migrations/013_phase4_copilot_cart_clicks.sql
+migrations/014_phase5_order_groups_prescription_lists.sql
+migrations/015_phase7_banners_fuzzy_cron.sql
+migrations/016_phase8_unified_checkout.sql
+migrations/017_phase8_team_courier_llm.sql
 ```
 
 Essas migrations adicionam:
@@ -83,6 +112,39 @@ Essas migrations adicionam:
 - Push notifications no navegador (`User.push_subscription`)
 - Farmácia padrão para medicamentos existentes e FK `Medicine.pharmacy_id` → `Pharmacy.id`
 - Políticas RLS de leitura do catálogo (`Medicine`, `Pharmacy`, `Images`) e estoque mínimo para medicamentos legados
+- Geolocalização de farmácias, audit log e permissões granulares (Fase 0)
+- Stripe Connect, comparador genérico/referência, KYC e fulfillment de assinaturas (Fase 1)
+- Entrega, retirada na farmácia, alertas e histórico de preço (Fase 2)
+- Copilot, sintomas, boost patrocinado (Fases 3–4)
+- Grupos de pedido multi-farmácia e listas de receita (Fase 5)
+- Banners institucionais, busca fuzzy `pg_trgm`, cron de alertas (Fase 7)
+- Checkout unificado com split Connect (Fase 8)
+- Permissões de equipe, courier externo Uber/99, upload de banners (Fase 8 — migration 017)
+
+## Cron de alertas de preço (local)
+
+Gere um segredo aleatório:
+
+```bash
+openssl rand -hex 32
+```
+
+Coloque em `.env`:
+
+```env
+CRON_SECRET=valor_gerado
+```
+
+Dispare manualmente:
+
+```bash
+curl -X POST "http://localhost:4000/api/cron/price-alerts" \
+  -H "x-cron-secret: valor_gerado"
+```
+
+Sem `CRON_SECRET` configurado, o endpoint responde **503** (`Cron not configured`). Com secret incorreto, **401**.
+
+Em produção no Render, veja [DEPLOY.md](./DEPLOY.md#render-cron-job--alertas-de-preço).
 
 ## Rodando localmente
 
@@ -306,7 +368,7 @@ Branch sugerida: `fix/marketplace-api-contracts` → base `master`.
 Antes de abrir o PR:
 
 1. `npm test`
-2. Rodar migrations `001`–`006` no Supabase de staging
+2. Rodar migrations `001`–`017` no Supabase de staging
 3. Configurar `STRIPE_WEBHOOK_SECRET` e testar evento na Stripe
 
 Compare: https://github.com/WallasAR/UmbrellaMarket-Backend/compare/master...fix/marketplace-api-contracts
