@@ -66,4 +66,47 @@ const userRegistration = async ({ email, pass }) => {
   return signToken({ id: userId, email, role: "customer" });
 };
 
-export { userLogin, userRegistration };
+const socialLoginSync = async ({ token }) => {
+  const { data: { user }, error: authError } = await sdb.auth.getUser(token);
+  if (authError || !user) throw new Error("Invalid Supabase token");
+
+  const email = user.email;
+  const { data: existingUser, error: fetchError } = await sdb
+    .from("User")
+    .select("id, pass, role, email, pharmacy_id")
+    .eq("email", email)
+    .single();
+
+  if (fetchError && fetchError.code !== 'PGRST116') {
+    throw new Error(fetchError.message);
+  }
+
+  if (existingUser) {
+    return signToken(existingUser);
+  }
+
+  const userId = generateUniqueId();
+  // Using a dummy password since social login users shouldn't have one initially
+  const hashedPass = bcrypt.hashSync(generateUniqueId(), 10);
+  
+  const avatar = user.user_metadata?.avatar_url || "https://cdn-icons-png.flaticon.com/512/219/219988.png";
+  const name = user.user_metadata?.full_name || "Não definido";
+
+  const { error } = await sdb.from("User").insert({
+    id: userId,
+    email,
+    pass: hashedPass,
+    role: "customer",
+    avatar: avatar,
+    name: name,
+    phone: "Não definido",
+    cep: "Não definido",
+    address: "Não definido"
+  });
+
+  if (error) throw new Error("Failed to register social user: " + error.message);
+
+  return signToken({ id: userId, email, role: "customer" });
+};
+
+export { userLogin, userRegistration, socialLoginSync };

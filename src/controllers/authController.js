@@ -1,4 +1,4 @@
-import { userLogin, userRegistration } from "../services/authService.js";
+import { userLogin, userRegistration, socialLoginSync } from "../services/authService.js";
 
 const signIn = async (req, res, next) => {
   try {
@@ -28,4 +28,16 @@ const register = async (req, res) => {
   }
 };
 
-export { signIn, register };
+const socialSignIn = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    if (!token) throw new Error("Supabase token is required");
+
+    const userToken = await socialLoginSync({ token });
+    res.status(200).json({ message: "Login Successfully", token: userToken });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export { signIn, register, socialSignIn };
