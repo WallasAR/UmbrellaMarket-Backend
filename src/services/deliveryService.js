@@ -1,5 +1,5 @@
 import sdb from "./database.js";
-import { getDeliveryQuote } from "./courierService.js";
+import { getDeliveryQuote, scheduleExternalDelivery } from "./courierService.js";
 import { createNotification } from "./notificationService.js";
 
 const DELIVERY_STATUS_FLOW = [
@@ -20,23 +20,25 @@ const quoteDeliveries = async ({ pharmacyIds, destLat, destLng, courier = "local
 
   if (error) throw new Error(error.message);
 
-  return (pharmacies || [])
-    .filter((pharmacy) => pharmacy.latitude != null && pharmacy.longitude != null)
-    .map((pharmacy) => {
-      const quote = getDeliveryQuote(courier, {
-        originLat: Number(pharmacy.latitude),
-        originLng: Number(pharmacy.longitude),
-        destLat,
-        destLng
-      });
+  return Promise.all(
+    (pharmacies || [])
+      .filter((pharmacy) => pharmacy.latitude != null && pharmacy.longitude != null)
+      .map(async (pharmacy) => {
+        const quote = await getDeliveryQuote(courier, {
+          originLat: Number(pharmacy.latitude),
+          originLng: Number(pharmacy.longitude),
+          destLat,
+          destLng
+        });
 
-      return {
-        pharmacy_id: pharmacy.id,
-        pharmacy_name: pharmacy.name,
-        pharmacy_address: pharmacy.address,
-        ...quote
-      };
-    });
+        return {
+          pharmacy_id: pharmacy.id,
+          pharmacy_name: pharmacy.name,
+          pharmacy_address: pharmacy.address,
+          ...quote
+        };
+      })
+  );
 };
 
 const createDeliveryForOrder = async ({
@@ -48,8 +50,32 @@ const createDeliveryForOrder = async ({
   courier,
   destinationAddress,
   destLat,
-  destLng
+  destLng,
+  externalQuoteId
 }) => {
+  let externalJob = null;
+
+  if (courier && courier !== "local" && destLat != null && destLng != null) {
+    const { data: pharmacy } = await sdb
+      .from("Pharmacy")
+      .select("name, latitude, longitude, address")
+      .eq("id", pharmacyId)
+      .maybeSingle();
+
+    if (pharmacy?.latitude != null && pharmacy?.longitude != null) {
+      externalJob = await scheduleExternalDelivery(courier, {
+        originLat: Number(pharmacy.latitude),
+        originLng: Number(pharmacy.longitude),
+        destLat: Number(destLat),
+        destLng: Number(destLng),
+        pickupName: pharmacy.name,
+        pickupAddress: pharmacy.address,
+        dropoffAddress: destinationAddress,
+        externalQuoteId
+      });
+    }
+  }
+
   const { data, error } = await sdb
     .from("Delivery")
     .insert({
@@ -57,12 +83,16 @@ const createDeliveryForOrder = async ({
       pharmacy_id: pharmacyId,
       user_id: userId,
       courier: courier || "local",
-      status: "awaiting_driver",
+      status: externalJob ? "awaiting_driver" : "awaiting_driver",
       quoted_price: quotedPrice,
       eta_minutes: etaMinutes,
       destination_address: destinationAddress,
       destination_lat: destLat,
-      destination_lng: destLng
+      destination_lng: destLng,
+      external_job_id: externalJob?.external_job_id || null,
+      provider: externalJob?.provider || (courier !== "local" ? courier : null),
+      provider_payload: externalJob?.provider_payload || null,
+      tracking_url: externalJob?.tracking_url || null
     })
     .select()
     .single();
