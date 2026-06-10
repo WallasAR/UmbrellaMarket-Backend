@@ -117,9 +117,46 @@ const getPharmacyPaymentConfig = async (pharmacyId) => {
   return data;
 };
 
+const executeUnifiedTransfers = async ({ sessionId, paymentIntentId, splitPlan = [] }) => {
+  if (!paymentIntentId || !splitPlan.length) {
+    return { transferred: 0, skipped: splitPlan.length };
+  }
+
+  let transferred = 0;
+  let skipped = 0;
+
+  for (const split of splitPlan) {
+    if (!split.connect_account_id || !split.transfer_cents || split.transfer_cents <= 0) {
+      skipped += 1;
+      continue;
+    }
+
+    try {
+      await stripe.transfers.create({
+        amount: split.transfer_cents,
+        currency: "brl",
+        destination: split.connect_account_id,
+        transfer_group: paymentIntentId,
+        metadata: {
+          pharmacy_id: split.pharmacy_id,
+          session_id: sessionId,
+          order_group_checkout: "unified"
+        }
+      });
+      transferred += 1;
+    } catch (err) {
+      console.error(`Unified transfer failed for pharmacy ${split.pharmacy_id}:`, err.message);
+      skipped += 1;
+    }
+  }
+
+  return { transferred, skipped };
+};
+
 export {
   refreshConnectStatus,
   createConnectOnboardingLink,
   handleAccountUpdated,
-  getPharmacyPaymentConfig
+  getPharmacyPaymentConfig,
+  executeUnifiedTransfers
 };
