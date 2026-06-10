@@ -11,6 +11,16 @@ const ensureDir = () => {
   }
 };
 
+const getMedicineIdsForPharmacy = async (pharmacyId) => {
+  const { data, error } = await sdb
+    .from("Medicine")
+    .select("id")
+    .eq("pharmacy_id", pharmacyId);
+
+  if (error) throw new Error(error.message);
+  return (data || []).map((row) => row.id);
+};
+
 const uploadPrescription = async ({ userId, medicineId, fileName, fileData }) => {
   ensureDir();
 
@@ -41,7 +51,7 @@ const uploadPrescription = async ({ userId, medicineId, fileName, fileData }) =>
 const listUserPrescriptions = async (userId) => {
   const { data, error } = await sdb
     .from("Prescription")
-    .select("*, Medicine(id, name)")
+    .select("*, Medicine(id, name, requires_prescription)")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
@@ -49,18 +59,49 @@ const listUserPrescriptions = async (userId) => {
   return data || [];
 };
 
-const listPendingPrescriptions = async () => {
-  const { data, error } = await sdb
+const listPendingPrescriptions = async (pharmacyId = null) => {
+  let query = sdb
     .from("Prescription")
-    .select("*, Medicine(id, name), User(email, name)")
+    .select("*, Medicine(id, name, pharmacy_id), User(email, name)")
     .eq("status", "pending")
     .order("created_at", { ascending: true });
 
+  if (pharmacyId) {
+    const medicineIds = await getMedicineIdsForPharmacy(pharmacyId);
+    if (!medicineIds.length) return [];
+    query = query.in("medicine_id", medicineIds);
+  }
+
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return data || [];
 };
 
-const reviewPrescription = async ({ prescriptionId, reviewerId, status, notes }) => {
+const getPrescriptionForReview = async (prescriptionId) => {
+  const { data, error } = await sdb
+    .from("Prescription")
+    .select("*, Medicine(id, name, pharmacy_id)")
+    .eq("id", prescriptionId)
+    .single();
+
+  if (error || !data) {
+    const notFound = new Error("Prescription not found");
+    notFound.status = 404;
+    throw notFound;
+  }
+
+  return data;
+};
+
+const reviewPrescription = async ({ prescriptionId, reviewerId, status, notes, pharmacyId = null }) => {
+  const existing = await getPrescriptionForReview(prescriptionId);
+
+  if (pharmacyId && existing.Medicine?.pharmacy_id !== pharmacyId) {
+    const forbidden = new Error("Prescription does not belong to this pharmacy");
+    forbidden.status = 403;
+    throw forbidden;
+  }
+
   const { data, error } = await sdb
     .from("Prescription")
     .update({

@@ -15,7 +15,15 @@ const pharmacyRegisterSchema = z.object({
   state: z.string().min(2, "State is required"),
   cep: z.string().min(8, "CEP is required"),
   phone: z.string().min(8, "Phone is required"),
-  plan_tier: z.enum(["free", "pro", "enterprise"]).optional()
+  plan_tier: z.enum(["free", "pro", "enterprise"]).optional(),
+  latitude: z.coerce.number().min(-90).max(90).optional(),
+  longitude: z.coerce.number().min(-180).max(180).optional()
+});
+
+const nearbyPharmaciesQuerySchema = z.object({
+  lat: z.coerce.number().min(-90).max(90),
+  lng: z.coerce.number().min(-180).max(180),
+  radius_km: z.coerce.number().positive().max(100).optional()
 });
 
 const batchSchema = z.object({
@@ -133,6 +141,7 @@ export {
   loginSchema,
   registerSchema,
   pharmacyRegisterSchema,
+  nearbyPharmaciesQuerySchema,
   batchSchema,
   planCheckoutSchema,
   orderStatusSchema,

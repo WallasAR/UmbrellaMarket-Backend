@@ -3,6 +3,7 @@ import {
   createPlanCheckout,
   createBillingPortal
 } from "../services/billingService.js";
+import { logAudit } from "../services/auditService.js";
 import sdb from "../services/database.js";
 import {
   getDashboard,
@@ -51,6 +52,18 @@ const addProduct = async (req, res, next) => {
 const editProduct = async (req, res, next) => {
   try {
     const data = await updateProduct(req.pharmacyId, Number(req.params.id), req.body);
+
+    if (req.body.price != null || req.body.discount != null) {
+      await logAudit({
+        actorId: req.user.id,
+        action: "medicine.price_changed",
+        entityType: "Medicine",
+        entityId: req.params.id,
+        payload: { price: req.body.price, discount: req.body.discount, pharmacy_id: req.pharmacyId },
+        ipAddress: req.ip
+      });
+    }
+
     res.status(200).json(data);
   } catch (error) {
     next(error);

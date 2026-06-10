@@ -1,4 +1,5 @@
 import sdb from "./database.js";
+import { haversineKm } from "../utils/geo.js";
 
 const listPharmacies = async () => {
   const { data, error } = await sdb
@@ -33,4 +34,19 @@ const createPharmacy = async (payload) => {
   return data;
 };
 
-export { listPharmacies, getPharmacyById, createPharmacy };
+const listNearbyPharmacies = async ({ lat, lng, radiusKm = 10 }) => {
+  const pharmacies = await listPharmacies();
+
+  return pharmacies
+    .filter((pharmacy) => pharmacy.latitude != null && pharmacy.longitude != null)
+    .map((pharmacy) => ({
+      ...pharmacy,
+      distance_km: Number(
+        haversineKm(lat, lng, Number(pharmacy.latitude), Number(pharmacy.longitude)).toFixed(2)
+      )
+    }))
+    .filter((pharmacy) => pharmacy.distance_km <= radiusKm)
+    .sort((a, b) => a.distance_km - b.distance_km);
+};
+
+export { listPharmacies, getPharmacyById, createPharmacy, listNearbyPharmacies };

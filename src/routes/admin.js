@@ -34,18 +34,19 @@ router.get("/dashboard", dashboard);
 router.post("/products", validateBody(productCreateSchema), createMedicine);
 router.put("/products/:id", updateMedicine);
 router.delete("/products/:id", removeMedicine);
-router.get("/users", users);
-router.patch("/users/:id/role", validateBody(roleUpdateSchema), setUserRole);
 router.get("/orders", orders);
 router.patch("/orders/:sessionId/status", validateBody(orderStatusSchema), setOrderStatus);
 router.get("/coupons", coupons);
 router.post("/coupons", validateBody(couponCreateSchema), addCoupon);
-router.post("/pharmacies", addPharmacy);
-router.get("/pharmacies/pending", pending);
-router.patch("/pharmacies/:id/approve", approve);
-router.patch("/pharmacies/:id/reject", validateBody(pharmacyRejectSchema), reject);
 
-router.get("/metrics", async (req, res, next) => {
+router.get("/users", requireRole("admin"), users);
+router.patch("/users/:id/role", requireRole("admin"), validateBody(roleUpdateSchema), setUserRole);
+router.post("/pharmacies", requireRole("admin"), addPharmacy);
+router.get("/pharmacies/pending", requireRole("admin"), pending);
+router.patch("/pharmacies/:id/approve", requireRole("admin"), approve);
+router.patch("/pharmacies/:id/reject", requireRole("admin"), validateBody(pharmacyRejectSchema), reject);
+
+router.get("/metrics", requireRole("admin"), async (req, res, next) => {
   try {
     const data = await getPlatformMetrics(req.query.period || "30d");
     res.status(200).json(data);
@@ -54,7 +55,7 @@ router.get("/metrics", async (req, res, next) => {
   }
 });
 
-router.get("/financial", async (req, res, next) => {
+router.get("/financial", requireRole("admin"), async (req, res, next) => {
   try {
     const data = await getPlatformFinancials(req.query.period || "30d");
     res.status(200).json(data);
@@ -63,7 +64,7 @@ router.get("/financial", async (req, res, next) => {
   }
 });
 
-router.get("/financial/export", async (req, res, next) => {
+router.get("/financial/export", requireRole("admin"), async (req, res, next) => {
   try {
     const period = req.query.period || "30d";
     const csv = await buildPlatformFinancialCsv(period);

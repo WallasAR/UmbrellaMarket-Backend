@@ -20,6 +20,9 @@ const errorMiddleware = (err, req, res, next) => {
     "Prescription data is required": { statusCode: 400, message: "Prescription data is required" },
     "Pharmacy not found": { statusCode: 404, message: "Pharmacy not found" },
     "Access denied": { statusCode: 403, message: "Access denied" },
+    "Prescription not found": { statusCode: 404, message: "Prescription not found" },
+    "Prescription does not belong to this pharmacy": { statusCode: 403, message: "Prescription does not belong to this pharmacy" },
+    "Only the pharmacy owner can access this resource": { statusCode: 403, message: "Only the pharmacy owner can access this resource" },
   };
 
   if (err.status) {

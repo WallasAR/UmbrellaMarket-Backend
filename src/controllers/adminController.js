@@ -6,6 +6,7 @@ import {
   updateUserRole,
   getDashboardStats
 } from "../services/adminService.js";
+import { logAudit } from "../services/auditService.js";
 import { listAllOrders, updateOrderStatus } from "../services/orderService.js";
 import { listCoupons, createCoupon } from "../services/couponService.js";
 import { createPharmacy } from "../services/pharmacyService.js";
@@ -58,6 +59,16 @@ const users = async (req, res, next) => {
 const setUserRole = async (req, res, next) => {
   try {
     await updateUserRole(req.params.id, req.body.role);
+
+    await logAudit({
+      actorId: req.user.id,
+      action: "user.role_updated",
+      entityType: "User",
+      entityId: req.params.id,
+      payload: { role: req.body.role },
+      ipAddress: req.ip
+    });
+
     res.status(200).json({ message: "Role updated" });
   } catch (error) {
     next(error);

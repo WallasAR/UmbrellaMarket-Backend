@@ -1,4 +1,4 @@
-import { listPharmacies, getPharmacyById } from "../services/pharmacyService.js";
+import { listPharmacies, getPharmacyById, listNearbyPharmacies } from "../services/pharmacyService.js";
 
 const list = async (req, res, next) => {
   try {
@@ -18,4 +18,18 @@ const getById = async (req, res, next) => {
   }
 };
 
-export { list, getById };
+const nearby = async (req, res, next) => {
+  try {
+    const { lat, lng, radius_km: radiusKm } = req.query;
+    const pharmacies = await listNearbyPharmacies({
+      lat,
+      lng,
+      radiusKm: radiusKm ?? 10
+    });
+    res.status(200).json(pharmacies);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export { list, getById, nearby };

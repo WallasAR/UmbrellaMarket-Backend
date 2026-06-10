@@ -8,6 +8,7 @@ const resolveUserPharmacy = async (req, res, next) => {
       const pharmacyId = req.headers["x-pharmacy-id"] || req.query.pharmacyId;
       if (pharmacyId) {
         req.pharmacyId = pharmacyId;
+        req.isPharmacyOwner = true;
         return next();
       }
     }
@@ -23,6 +24,14 @@ const resolveUserPharmacy = async (req, res, next) => {
     }
 
     req.pharmacyId = data.pharmacy_id;
+
+    const { data: pharmacy } = await sdb
+      .from("Pharmacy")
+      .select("owner_user_id")
+      .eq("id", data.pharmacy_id)
+      .single();
+
+    req.isPharmacyOwner = pharmacy?.owner_user_id === req.user.id;
     next();
   } catch (err) {
     next(err);

@@ -13,7 +13,10 @@ const getCart = async (userId) => {
         discount,
         stock,
         description,
-        Images (thumb_img)
+        pharmacy_id,
+        requires_prescription,
+        Images (thumb_img),
+        Pharmacy (id, name)
       )
     `)
     .eq("user_id", userId);

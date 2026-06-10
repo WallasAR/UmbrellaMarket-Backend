@@ -6,6 +6,7 @@ import {
   approvePharmacy,
   rejectPharmacy
 } from "../services/onboardingService.js";
+import { logAudit } from "../services/auditService.js";
 const plans = async (req, res, next) => {
   try {
     const data = await listPlans();
@@ -45,6 +46,16 @@ const pending = async (req, res, next) => {
 const approve = async (req, res, next) => {
   try {
     const pharmacy = await approvePharmacy(req.params.id);
+
+    await logAudit({
+      actorId: req.user.id,
+      action: "pharmacy.approved",
+      entityType: "Pharmacy",
+      entityId: req.params.id,
+      payload: { name: pharmacy.name },
+      ipAddress: req.ip
+    });
+
     res.status(200).json(pharmacy);
   } catch (error) {
     next(error);
@@ -54,6 +65,16 @@ const approve = async (req, res, next) => {
 const reject = async (req, res, next) => {
   try {
     const pharmacy = await rejectPharmacy(req.params.id, req.body.reason);
+
+    await logAudit({
+      actorId: req.user.id,
+      action: "pharmacy.rejected",
+      entityType: "Pharmacy",
+      entityId: req.params.id,
+      payload: { reason: req.body.reason },
+      ipAddress: req.ip
+    });
+
     res.status(200).json(pharmacy);
   } catch (error) {
     next(error);
