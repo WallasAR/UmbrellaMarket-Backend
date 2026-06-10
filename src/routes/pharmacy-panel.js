@@ -13,7 +13,8 @@ import {
   productUpdateSchema,
   prescriptionReviewSchema,
   kycUploadSchema,
-  pickupConfirmSchema
+  pickupConfirmSchema,
+  boostCreateSchema
 } from "../schemas/index.js";
 import { startOnboarding, getStatus } from "../controllers/connectController.js";
 import { uploadDocument, listDocuments } from "../controllers/kycController.js";
@@ -39,7 +40,10 @@ import {
   productPriceBenchmark,
   productPriceHistory,
   deliveries,
-  advanceDelivery
+  advanceDelivery,
+  boosts,
+  addBoost,
+  removeBoost
 } from "../controllers/pharmacyPanelController.js";
 import { listPharmacyPending, reviewPharmacyPrescription } from "../controllers/prescriptionController.js";
 import { getPharmacyFinancials, buildPharmacyFinancialCsv } from "../services/financialService.js";
@@ -121,5 +125,9 @@ router.get("/products/:id/price-history", requirePharmacyPermission("financial")
 router.get("/deliveries", requirePharmacyPermission("orders"), deliveries);
 router.post("/deliveries/:id/advance", requirePharmacyPermission("orders"), advanceDelivery);
 router.post("/pickup/confirm", requirePharmacyPermission("orders"), validateBody(pickupConfirmSchema), confirmPickupOrder);
+
+router.get("/boosts", requirePharmacyPermission("products"), boosts);
+router.post("/boosts", requirePharmacyPermission("products"), validateBody(boostCreateSchema), addBoost);
+router.delete("/boosts/:id", requirePharmacyPermission("products"), removeBoost);
 
 export default router;

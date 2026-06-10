@@ -1,4 +1,5 @@
 import { fetchProducts, fetchProduct, listCategories, fetchAlternatives } from '../services/medicineService.js';
+import { getActiveBoosts } from '../services/boostService.js';
 
 const getProducts = async (req, res, next) => {
   try {
@@ -41,4 +42,13 @@ const getAlternatives = async (req, res, next) => {
   }
 };
 
-export { getProducts, getProduct, getCategories, getAlternatives };
+const getSponsored = async (_req, res, next) => {
+  try {
+    const products = await getActiveBoosts();
+    res.status(200).json(products);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export { getProducts, getProduct, getCategories, getAlternatives, getSponsored };

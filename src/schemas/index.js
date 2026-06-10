@@ -91,6 +91,23 @@ const pickupConfirmSchema = z.object({
   pickup_code: z.string().min(4).max(20)
 });
 
+const copilotChatSchema = z.object({
+  message: z.string().min(2).max(1000)
+});
+
+const prescriptionScanSchema = z.object({
+  text: z.string().optional(),
+  file_data: z.string().optional()
+}).refine((data) => data.text || data.file_data, {
+  message: "Informe text ou file_data"
+});
+
+const boostCreateSchema = z.object({
+  medicine_id: z.coerce.number().int().positive(),
+  days: z.coerce.number().int().min(1).max(90).optional().default(7),
+  priority: z.coerce.number().int().min(1).max(10).optional().default(1)
+});
+
 const reviewSchema = z.object({
   medicine_id: z.coerce.number().int().positive(),
   rating: z.coerce.number().int().min(1).max(5),
@@ -163,6 +180,7 @@ const productCreateSchema = z.object({
   laboratory: z.string().optional(),
   medicine_type: z.enum(["reference", "generic"]).optional(),
   dosage: z.string().optional(),
+  symptoms: z.array(z.string().min(2)).optional(),
   pharmacy_id: z.string().uuid().optional(),
   images: z.object({
     thumb_img: z.string().optional(),
@@ -199,6 +217,9 @@ export {
   deliveryQuoteSchema,
   priceAlertSchema,
   pickupConfirmSchema,
+  copilotChatSchema,
+  prescriptionScanSchema,
+  boostCreateSchema,
   reviewSchema,
   couponValidateSchema,
   prescriptionSchema,

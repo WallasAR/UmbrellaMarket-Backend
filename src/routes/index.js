@@ -18,6 +18,8 @@ import onboardingRoutes from "./onboarding.js";
 import deliveryRoutes from "./delivery.js";
 import pickupRoutes from "./pickup.js";
 import priceAlertRoutes from "./price-alerts.js";
+import symptomRoutes from "./symptoms.js";
+import copilotRoutes from "./copilot.js";
 
 const router = express.Router();
 
@@ -39,5 +41,7 @@ router.use("/onboarding", onboardingRoutes);
 router.use("/delivery", deliveryRoutes);
 router.use("/pickup", pickupRoutes);
 router.use("/price-alerts", priceAlertRoutes);
+router.use("/symptoms", symptomRoutes);
+router.use("/copilot", copilotRoutes);
 
 export default router;

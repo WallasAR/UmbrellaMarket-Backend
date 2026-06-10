@@ -7,6 +7,7 @@ import { logAudit } from "../services/auditService.js";
 import { confirmPickup } from "../services/pickupService.js";
 import { advanceDeliveryStatus, listPharmacyDeliveries } from "../services/deliveryService.js";
 import { getPriceBenchmark, getProductPriceHistory, recordPriceSnapshot } from "../services/priceHistoryService.js";
+import { listPharmacyBoosts, createBoost, deactivateBoost } from "../services/boostService.js";
 import sdb from "../services/database.js";
 import {
   getDashboard,
@@ -258,6 +259,38 @@ const advanceDelivery = async (req, res, next) => {
   }
 };
 
+const boosts = async (req, res, next) => {
+  try {
+    const data = await listPharmacyBoosts(req.pharmacyId);
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const addBoost = async (req, res, next) => {
+  try {
+    const data = await createBoost({
+      pharmacyId: req.pharmacyId,
+      medicineId: req.body.medicine_id,
+      days: req.body.days,
+      priority: req.body.priority
+    });
+    res.status(201).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const removeBoost = async (req, res, next) => {
+  try {
+    const data = await deactivateBoost(req.params.id, req.pharmacyId);
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   billing,
   billingCheckout,
@@ -280,5 +313,8 @@ export {
   productPriceBenchmark,
   productPriceHistory,
   deliveries,
-  advanceDelivery
+  advanceDelivery,
+  boosts,
+  addBoost,
+  removeBoost
 };

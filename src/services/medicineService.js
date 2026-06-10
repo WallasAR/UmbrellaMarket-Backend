@@ -1,5 +1,6 @@
 import sdb from "./database.js";
 import { applyProductDiscount } from "../utils/pricing.js";
+import { getActiveBoosts, applyBoostOrdering } from "./boostService.js";
 
 const PRODUCT_SELECT = `
   *,
@@ -39,7 +40,14 @@ const fetchProducts = async ({ discount, stock, q, category, minPrice, maxPrice,
   const { data, error } = await query;
 
   if (error) throw new Error(error.message);
-  return data;
+
+  const products = data || [];
+  if (!sort || sort === "name_asc") {
+    const boosts = await getActiveBoosts().catch(() => []);
+    return applyBoostOrdering(products, boosts);
+  }
+
+  return products;
 };
 
 const fetchProduct = async (id) => {
