@@ -11,8 +11,11 @@ import {
   operationalStatusSchema,
   productCreateSchema,
   productUpdateSchema,
-  prescriptionReviewSchema
+  prescriptionReviewSchema,
+  kycUploadSchema
 } from "../schemas/index.js";
+import { startOnboarding, getStatus } from "../controllers/connectController.js";
+import { uploadDocument, listDocuments } from "../controllers/kycController.js";
 import {
   billing,
   billingCheckout,
@@ -100,5 +103,11 @@ router.get("/financial/export", requirePharmacyPermission("financial"), async (r
 router.get("/billing", requirePharmacyOwner, billing);
 router.post("/billing/checkout", requirePharmacyOwner, validateBody(planCheckoutSchema), billingCheckout);
 router.post("/billing/portal", requirePharmacyOwner, billingPortal);
+
+router.post("/connect/onboard", requirePharmacyOwner, startOnboarding);
+router.get("/connect/status", requirePharmacyOwner, getStatus);
+
+router.get("/kyc/documents", requirePharmacyOwner, listDocuments);
+router.post("/kyc/documents", requirePharmacyOwner, validateBody(kycUploadSchema), uploadDocument);
 
 export default router;

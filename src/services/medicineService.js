@@ -1,4 +1,5 @@
 import sdb from "./database.js";
+import { applyProductDiscount } from "../utils/pricing.js";
 
 const PRODUCT_SELECT = `
   *,
@@ -66,4 +67,51 @@ const listCategories = async () => {
   return categories.sort();
 };
 
-export { fetchProducts, fetchProduct, listCategories };
+const computeFinalPrice = (medicine) =>
+  applyProductDiscount(Number(medicine.price), Number(medicine.discount || 0));
+
+const fetchAlternatives = async (productId) => {
+  const product = await fetchProduct(productId);
+
+  if (!product.active_ingredient) {
+    return {
+      product,
+      alternatives: [],
+      cheapest: null,
+      savings_percent: 0
+    };
+  }
+
+  const { data, error } = await sdb
+    .from("Medicine")
+    .select(PRODUCT_SELECT)
+    .ilike("active_ingredient", product.active_ingredient)
+    .gt("stock", 0)
+    .neq("id", productId);
+
+  if (error) throw new Error(error.message);
+
+  const currentPrice = computeFinalPrice(product);
+  const alternatives = (data || [])
+    .map((item) => ({
+      ...item,
+      final_price: computeFinalPrice(item)
+    }))
+    .sort((a, b) => a.final_price - b.final_price);
+
+  const cheapest = alternatives[0] || null;
+  const cheapestGeneric = alternatives.find((item) => item.medicine_type === "generic") || cheapest;
+  const savingsPercent = cheapest && currentPrice > 0
+    ? Math.max(0, Math.round((1 - cheapest.final_price / currentPrice) * 100))
+    : 0;
+
+  return {
+    product: { ...product, final_price: currentPrice },
+    alternatives,
+    cheapest,
+    cheapest_generic: cheapestGeneric,
+    savings_percent: savingsPercent
+  };
+};
+
+export { fetchProducts, fetchProduct, listCategories, fetchAlternatives };

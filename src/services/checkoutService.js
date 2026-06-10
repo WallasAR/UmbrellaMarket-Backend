@@ -18,6 +18,8 @@ import {
   cancelPharmacyBillingByStripeId,
   markPharmacyBillingPastDue
 } from "./billingService.js";
+import { getPharmacyPaymentConfig, handleAccountUpdated } from "./connectService.js";
+import { fulfillSubscriptionRenewal } from "./subscriptionService.js";
 
 dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_KEY);
@@ -71,13 +73,32 @@ const createSessionForItems = async (userId, cartItems, couponCode = null) => {
     lineItems = buildLineItems(cartItems, ratio);
   }
 
-  const session = await stripe.checkout.sessions.create({
+  const pharmacyId = cartItems[0]?.Medicine?.pharmacy_id;
+  const paymentConfig = await getPharmacyPaymentConfig(pharmacyId);
+
+  const sessionPayload = {
     payment_method_types: ["card"],
     line_items: lineItems,
     mode: "payment",
     success_url: `${process.env.SUCCESS_URL}?sessionId={CHECKOUT_SESSION_ID}`,
     cancel_url: process.env.CANCEL_URL
-  });
+  };
+
+  if (paymentConfig) {
+    const subtotalCents = lineItems.reduce(
+      (sum, item) => sum + item.price_data.unit_amount * item.quantity,
+      0
+    );
+    const feeRate = Number(paymentConfig.commission_rate ?? 0.1);
+    const applicationFee = Math.round(subtotalCents * feeRate);
+
+    sessionPayload.payment_intent_data = {
+      application_fee_amount: applicationFee,
+      transfer_data: { destination: paymentConfig.stripe_connect_account_id }
+    };
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionPayload);
 
   const purchaseData = cartItems.map((item) => ({
     id: session.id,
@@ -293,6 +314,14 @@ const handleStripeWebhook = async (rawBody, signature) => {
       const handled = await markPharmacyBillingPastDue(subscriptionId);
       if (!handled) await markSubscriptionPaymentFailed(subscriptionId);
     }
+  }
+
+  if (event.type === "invoice.payment_succeeded") {
+    await fulfillSubscriptionRenewal(event.data.object);
+  }
+
+  if (event.type === "account.updated") {
+    await handleAccountUpdated(event.data.object);
   }
 
   await markEventProcessed(event.id, event.type);

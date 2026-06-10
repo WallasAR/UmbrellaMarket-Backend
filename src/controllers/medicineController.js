@@ -1,4 +1,4 @@
-import { fetchProducts, fetchProduct, listCategories } from '../services/medicineService.js';
+import { fetchProducts, fetchProduct, listCategories, fetchAlternatives } from '../services/medicineService.js';
 
 const getProducts = async (req, res, next) => {
   try {
@@ -30,4 +30,15 @@ const getCategories = async (req, res, next) => {
   }
 };
 
-export { getProducts, getProduct, getCategories };
+const getAlternatives = async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    if (typeof id !== "number" || isNaN(id)) throw Error("Invalid product");
+    const data = await fetchAlternatives(id);
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export { getProducts, getProduct, getCategories, getAlternatives };

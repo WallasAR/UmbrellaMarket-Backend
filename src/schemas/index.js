@@ -107,6 +107,17 @@ const couponCreateSchema = z.object({
   expires_at: z.string().optional()
 });
 
+const kycUploadSchema = z.object({
+  document_type: z.enum(["cnpj", "alvara", "crf", "other"]),
+  file_name: z.string().optional(),
+  file_data: z.string().min(20, "Document file is required")
+});
+
+const kycReviewSchema = z.object({
+  status: z.enum(["approved", "rejected"]),
+  notes: z.string().max(500).optional()
+});
+
 const productCreateSchema = z.object({
   name: z.string().min(2),
   price: z.coerce.number().positive(),
@@ -118,6 +129,8 @@ const productCreateSchema = z.object({
   allows_subscription: z.boolean().optional(),
   active_ingredient: z.string().optional(),
   laboratory: z.string().optional(),
+  medicine_type: z.enum(["reference", "generic"]).optional(),
+  dosage: z.string().optional(),
   pharmacy_id: z.string().uuid().optional(),
   images: z.object({
     thumb_img: z.string().optional(),
@@ -142,6 +155,8 @@ export {
   registerSchema,
   pharmacyRegisterSchema,
   nearbyPharmaciesQuerySchema,
+  kycUploadSchema,
+  kycReviewSchema,
   batchSchema,
   planCheckoutSchema,
   orderStatusSchema,

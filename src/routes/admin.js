@@ -23,8 +23,10 @@ import {
   roleUpdateSchema,
   pharmacyRejectSchema,
   couponCreateSchema,
-  productCreateSchema
+  productCreateSchema,
+  kycReviewSchema
 } from "../schemas/index.js";
+import { adminListDocuments, reviewDocument } from "../controllers/kycController.js";
 
 const router = express.Router();
 
@@ -45,6 +47,8 @@ router.post("/pharmacies", requireRole("admin"), addPharmacy);
 router.get("/pharmacies/pending", requireRole("admin"), pending);
 router.patch("/pharmacies/:id/approve", requireRole("admin"), approve);
 router.patch("/pharmacies/:id/reject", requireRole("admin"), validateBody(pharmacyRejectSchema), reject);
+router.get("/pharmacies/:pharmacyId/kyc", requireRole("admin"), adminListDocuments);
+router.patch("/kyc/:id/review", requireRole("admin"), validateBody(kycReviewSchema), reviewDocument);
 
 router.get("/metrics", requireRole("admin"), async (req, res, next) => {
   try {

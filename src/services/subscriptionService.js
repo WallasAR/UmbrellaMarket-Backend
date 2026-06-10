@@ -4,6 +4,7 @@ import sdb from "./database.js";
 import { applyProductDiscount, toStripeAmount } from "../utils/pricing.js";
 import { createNotification } from "./notificationService.js";
 import { sendEmail } from "./emailService.js";
+import { recordPurchaseFees } from "./financialService.js";
 
 dotenv.config();
 const stripe = new Stripe(process.env.STRIPE_KEY);
@@ -148,11 +149,93 @@ const cancelSubscription = async (userId, subscriptionId) => {
   await sdb.from("Subscription").update({ status: "cancelled" }).eq("id", subscriptionId);
 };
 
+const fulfillSubscriptionRenewal = async (invoice) => {
+  if (!invoice.subscription || invoice.billing_reason === "subscription_create") {
+    return false;
+  }
+
+  const { data: subscription } = await sdb
+    .from("Subscription")
+    .select("*, Medicine(id, name, price, discount, stock, pharmacy_id)")
+    .eq("stripe_subscription_id", invoice.subscription)
+    .maybeSingle();
+
+  if (!subscription) return false;
+  if (subscription.last_invoice_id === invoice.id) return true;
+
+  const medicine = subscription.Medicine;
+  if (!medicine?.stock || medicine.stock < subscription.quantity) {
+    await createNotification({
+      user_id: subscription.user_id,
+      title: "Assinatura sem estoque",
+      message: `${medicine?.name || "Medicamento"} está sem estoque para a renovação deste mês.`,
+      type: "alert"
+    });
+    return false;
+  }
+
+  const unitPrice = applyProductDiscount(medicine.price, medicine.discount);
+  const totalPrice = unitPrice * subscription.quantity;
+  const purchaseId = `sub-${invoice.id}`;
+
+  const { error: purchaseError } = await sdb.from("Purchase").insert({
+    id: purchaseId,
+    user_id: subscription.user_id,
+    medicine_id: subscription.medicine_id,
+    quantity: subscription.quantity,
+    total_price: totalPrice,
+    payment_status: "paid",
+    payment_method: "Assinatura",
+    order_status: "processing",
+    pharmacy_id: medicine.pharmacy_id || null
+  });
+
+  if (purchaseError) throw new Error(purchaseError.message);
+
+  if (medicine.pharmacy_id) {
+    await recordPurchaseFees(purchaseId, medicine.pharmacy_id);
+  }
+
+  await sdb
+    .from("Medicine")
+    .update({ stock: medicine.stock - subscription.quantity })
+    .eq("id", subscription.medicine_id);
+
+  const nextDelivery = new Date();
+  nextDelivery.setDate(nextDelivery.getDate() + (subscription.interval_days || 30));
+
+  await sdb
+    .from("Subscription")
+    .update({
+      last_invoice_id: invoice.id,
+      next_delivery_at: nextDelivery.toISOString(),
+      status: "active"
+    })
+    .eq("id", subscription.id);
+
+  await createNotification({
+    user_id: subscription.user_id,
+    title: "Renovação da assinatura",
+    message: `Seu pedido recorrente de ${medicine.name} foi gerado e está em processamento.`,
+    type: "subscription"
+  });
+
+  const { data: user } = await sdb.from("User").select("email, name").eq("id", subscription.user_id).single();
+  await sendEmail({
+    to: user?.email,
+    subject: "Renovação da assinatura - Umbrella Farmácia",
+    text: `Olá ${user?.name || ""}, sua assinatura de ${medicine.name} foi renovada. Pedido: ${purchaseId.slice(-8)}.`
+  });
+
+  return true;
+};
+
 export {
   listUserSubscriptions,
   createSubscriptionCheckout,
   activateSubscription,
   cancelSubscription,
   cancelSubscriptionByStripeId,
-  markSubscriptionPaymentFailed
+  markSubscriptionPaymentFailed,
+  fulfillSubscriptionRenewal
 };
