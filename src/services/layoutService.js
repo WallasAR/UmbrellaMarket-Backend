@@ -1,4 +1,15 @@
 import sdb from "./database.js";
+import fs from "fs";
+import path from "path";
+import { v4 as uuidv4 } from "uuid";
+
+const BANNER_DIR = path.join(path.resolve(), "src/public/banners");
+
+const ensureDir = () => {
+  if (!fs.existsSync(BANNER_DIR)) {
+    fs.mkdirSync(BANNER_DIR, { recursive: true });
+  }
+};
 
 /**
  * Gets the active layout for a pharmacy. If no active layout exists,
@@ -131,12 +142,25 @@ export const savePharmacyLayout = async (pharmacyId, layoutData) => {
 
       if (sec.items) {
         for (const item of sec.items) {
+          let imageUrl = item.image_url;
+
+          // If the item contains file data, upload it
+          if (item.file_data && item.file_name) {
+            ensureDir();
+            const extension = path.extname(item.file_name || ".jpg") || ".jpg";
+            const safeName = `${pharmacyId}-${uuidv4()}${extension}`;
+            const filePath = path.join(BANNER_DIR, safeName);
+            const buffer = Buffer.from(item.file_data, "base64");
+            fs.writeFileSync(filePath, buffer);
+            imageUrl = `/static/banners/${safeName}`;
+          }
+
           await sdb.from("PharmacyLayoutItem").upsert({
             id: item.id,
             section_id: sectionData.id,
             title: item.title,
             subtitle: item.subtitle,
-            image_url: item.image_url,
+            image_url: imageUrl,
             link_url: item.link_url,
             display_order: item.display_order,
             metadata: item.metadata
