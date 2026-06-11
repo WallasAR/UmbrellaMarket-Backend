@@ -82,6 +82,8 @@ const completePharmacyInvite = async (payload) => {
     .from("Pharmacy")
     .update({
       cnpj,
+      primary_color: primary_color || '#F74838',
+      is_online_only: is_online_only || false,
       onboarding_status: "approved",
       active: true,
       owner_user_id: userId,
