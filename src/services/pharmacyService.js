@@ -12,6 +12,19 @@ const listPharmacies = async () => {
   return data || [];
 };
 
+const listAllPharmacies = async () => {
+  const { data, error } = await sdb
+    .from("Pharmacy")
+    .select(`
+      *,
+      PharmacyInvite ( id, email, token, used, expires_at )
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return data || [];
+};
+
 const getPharmacyById = async (id) => {
   const { data, error } = await sdb
     .from("Pharmacy")
@@ -42,7 +55,49 @@ const resolveByDomain = async (domain) => {
 const createPharmacy = async (payload) => {
   const { data, error } = await sdb
     .from("Pharmacy")
-    .insert(payload)
+    .insert({
+      name: payload.name,
+      active: false,
+      onboarding_status: 'approved'
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  
+  if (payload.owner_email) {
+    const inviteData = await createPharmacyInvite(data.id, payload.owner_email);
+    return { ...data, invite: inviteData };
+  }
+
+  return data;
+};
+
+const updatePharmacy = async (id, payload) => {
+  const { data, error } = await sdb
+    .from("Pharmacy")
+    .update(payload)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+const deletePharmacy = async (id) => {
+  const { error } = await sdb
+    .from("Pharmacy")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
+};
+
+const createPharmacyInvite = async (pharmacy_id, email) => {
+  const { data, error } = await sdb
+    .from("PharmacyInvite")
+    .insert({ pharmacy_id, email })
     .select()
     .single();
 
@@ -65,4 +120,14 @@ const listNearbyPharmacies = async ({ lat, lng, radiusKm = 10 }) => {
     .sort((a, b) => a.distance_km - b.distance_km);
 };
 
-export { listPharmacies, getPharmacyById, resolveByDomain, createPharmacy, listNearbyPharmacies };
+export { 
+  listPharmacies, 
+  listAllPharmacies, 
+  getPharmacyById, 
+  resolveByDomain, 
+  createPharmacy, 
+  updatePharmacy, 
+  deletePharmacy, 
+  createPharmacyInvite,
+  listNearbyPharmacies 
+};

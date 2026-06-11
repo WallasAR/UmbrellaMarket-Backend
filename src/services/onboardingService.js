@@ -1,17 +1,10 @@
 import sdb from "./database.js";
-import { createNotification } from "./notificationService.js";
-import { sendEmail } from "./emailService.js";
+import bcrypt from "bcryptjs";
+import { v4 as uuidv4 } from "uuid";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 
-const listPlans = async () => {
-  const { data, error } = await sdb
-    .from("SaasPlan")
-    .select("*")
-    .eq("active", true)
-    .order("monthly_price", { ascending: true });
-
-  if (error) throw new Error(error.message);
-  return data || [];
-};
+dotenv.config();
 
 const getPlanByTier = async (tier) => {
   const { data, error } = await sdb
@@ -25,185 +18,94 @@ const getPlanByTier = async (tier) => {
   return data;
 };
 
-const getUserOnboardingStatus = async (userId) => {
-  const { data: user, error } = await sdb
-    .from("User")
-    .select("pharmacy_id, role")
-    .eq("id", userId)
-    .single();
+const completePharmacyInvite = async (payload) => {
+  const { token, password, is_online_only, cnpj, alvara, primary_color } = payload;
 
-  if (error) throw new Error(error.message);
-  if (!user?.pharmacy_id) return { status: "none" };
-
-  const { data: pharmacy } = await sdb
-    .from("Pharmacy")
-    .select("id, name, onboarding_status, plan_tier, rejected_reason, created_at")
-    .eq("id", user.pharmacy_id)
-    .single();
-
-  return {
-    status: pharmacy?.onboarding_status || "none",
-    pharmacy,
-    role: user.role
-  };
-};
-
-const registerPharmacy = async (userId, payload) => {
-  const existing = await getUserOnboardingStatus(userId);
-  if (existing.pharmacy) {
-    throw new Error("User already has a pharmacy registration");
-  }
-
-  const plan = await getPlanByTier(payload.plan_tier || "free");
-
-  const { data: pharmacy, error: pharmacyError } = await sdb
-    .from("Pharmacy")
-    .insert({
-      name: payload.name,
-      cnpj: payload.cnpj,
-      address: payload.address,
-      city: payload.city,
-      state: payload.state,
-      cep: payload.cep,
-      phone: payload.phone,
-      latitude: payload.latitude ?? null,
-      longitude: payload.longitude ?? null,
-      plan_tier: plan.tier,
-      commission_rate: plan.commission_rate,
-      tenant_domain: payload.tenant_domain || null,
-      onboarding_status: "pending",
-      operational_status: "closed",
-      active: false,
-      owner_user_id: userId
-    })
-    .select()
-    .single();
-
-  if (pharmacyError) throw new Error(pharmacyError.message);
-
-  const { error: userError } = await sdb
-    .from("User")
-    .update({ role: "pharmacist", pharmacy_id: pharmacy.id })
-    .eq("id", userId);
-
-  if (userError) throw new Error(userError.message);
-
-  const { data: admins } = await sdb.from("User").select("id, email").eq("role", "admin");
-  for (const admin of admins || []) {
-    await createNotification({
-      user_id: admin.id,
-      title: "Nova farmácia pendente",
-      message: `${pharmacy.name} solicitou cadastro no plano ${plan.name}.`,
-      type: "alert"
-    });
-    await sendEmail({
-      to: admin.email,
-      subject: "Nova farmácia pendente - Umbrella",
-      text: `A farmácia ${pharmacy.name} aguarda aprovação.`
-    });
-  }
-
-  return pharmacy;
-};
-
-const listPendingPharmacies = async () => {
-  const { data, error } = await sdb
-    .from("Pharmacy")
+  // 1. Verify token
+  const { data: invite, error: inviteError } = await sdb
+    .from("PharmacyInvite")
     .select("*")
-    .eq("onboarding_status", "pending")
-    .order("created_at", { ascending: true });
+    .eq("token", token)
+    .single();
 
-  if (error) throw new Error(error.message);
+  if (inviteError || !invite) {
+    throw new Error("Invalid or missing invite token");
+  }
 
-  const ownerIds = [...new Set((data || []).map((p) => p.owner_user_id).filter(Boolean))];
-  if (!ownerIds.length) return data || [];
+  if (invite.used) {
+    throw new Error("Invite token has already been used");
+  }
 
-  const { data: owners } = await sdb.from("User").select("id, email, name").in("id", ownerIds);
-  const ownerMap = Object.fromEntries((owners || []).map((u) => [u.id, u]));
+  if (new Date(invite.expires_at) < new Date()) {
+    throw new Error("Invite token has expired");
+  }
 
-  return (data || []).map((pharmacy) => ({
-    ...pharmacy,
-    owner: ownerMap[pharmacy.owner_user_id] || null
-  }));
-};
+  // 2. Check if user already exists
+  const { data: existingUser } = await sdb
+    .from("User")
+    .select("id")
+    .eq("email", invite.email)
+    .single();
 
-const approvePharmacy = async (pharmacyId) => {
-  const { data: current } = await sdb.from("Pharmacy").select("plan_tier").eq("id", pharmacyId).single();
-  const plan = await getPlanByTier(current?.plan_tier || "free");
-  const billingStatus = Number(plan.monthly_price) > 0 ? "pending_payment" : "active";
+  let userId;
 
-  const { data, error } = await sdb
+  if (existingUser) {
+    userId = existingUser.id;
+    // Update role and pharmacy
+    await sdb.from("User").update({
+      role: "pharmacist",
+      pharmacy_id: invite.pharmacy_id,
+      pass: password ? bcrypt.hashSync(password, 10) : undefined // Update password if provided
+    }).eq("id", userId);
+  } else {
+    // Create new user
+    userId = uuidv4();
+    const hashedPass = bcrypt.hashSync(password, 10);
+    const { error: userError } = await sdb.from("User").insert({
+      id: userId,
+      email: invite.email,
+      pass: hashedPass,
+      role: "pharmacist",
+      pharmacy_id: invite.pharmacy_id,
+      avatar: "https://cdn-icons-png.flaticon.com/512/219/219988.png",
+      name: "Dono da Farmácia",
+      phone: "Não definido",
+      cep: "Não definido",
+      address: "Não definido"
+    });
+
+    if (userError) throw new Error("Failed to create user: " + userError.message);
+  }
+
+  // 3. Update Pharmacy
+  const { error: pharmacyError } = await sdb
     .from("Pharmacy")
     .update({
+      cnpj,
       onboarding_status: "approved",
-      active: billingStatus === "active",
-      operational_status: billingStatus === "active" ? "open" : "closed",
-      approved_at: new Date().toISOString(),
-      rejected_reason: null,
-      billing_status: billingStatus,
-      plan_started_at: billingStatus === "active" ? new Date().toISOString() : null
+      active: true,
+      owner_user_id: userId,
+      operational_status: "open"
     })
-    .eq("id", pharmacyId)
-    .select()
-    .single();
+    .eq("id", invite.pharmacy_id);
 
-  if (error) throw new Error(error.message);
+  if (pharmacyError) throw new Error("Failed to update pharmacy: " + pharmacyError.message);
 
-  if (data.owner_user_id) {
-    const { data: owner } = await sdb.from("User").select("email").eq("id", data.owner_user_id).single();
-    const billingNote = billingStatus === "pending_payment"
-      ? " Ative o plano pago no painel da farmácia para começar a vender."
-      : "";
+  // 4. Mark invite as used
+  await sdb.from("PharmacyInvite").update({ used: true }).eq("id", invite.id);
 
-    await createNotification({
-      user_id: data.owner_user_id,
-      title: "Farmácia aprovada",
-      message: `Sua farmácia ${data.name} foi aprovada.${billingNote}`,
-      type: "info"
-    });
-    await sendEmail({
-      to: owner?.email,
-      subject: "Farmácia aprovada - Umbrella",
-      text: `Parabéns! Sua farmácia ${data.name} foi aprovada.${billingNote}`
-    });
-  }
+  // Return a JWT so they can automatically log in
+  const signedToken = jwt.sign(
+    {
+      id: userId,
+      email: invite.email,
+      role: "pharmacist",
+      pharmacy_id: invite.pharmacy_id
+    },
+    process.env.JWT_TOKEN
+  );
 
-  return data;
+  return { token: signedToken, message: "Onboarding complete" };
 };
 
-const rejectPharmacy = async (pharmacyId, reason) => {
-  const { data, error } = await sdb
-    .from("Pharmacy")
-    .update({
-      onboarding_status: "rejected",
-      active: false,
-      operational_status: "closed",
-      rejected_reason: reason || "Cadastro recusado"
-    })
-    .eq("id", pharmacyId)
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-
-  if (data.owner_user_id) {
-    await createNotification({
-      user_id: data.owner_user_id,
-      title: "Farmácia recusada",
-      message: data.rejected_reason,
-      type: "alert"
-    });
-  }
-
-  return data;
-};
-
-export {
-  listPlans,
-  getPlanByTier,
-  getUserOnboardingStatus,
-  registerPharmacy,
-  listPendingPharmacies,
-  approvePharmacy,
-  rejectPharmacy
-};
+export { completePharmacyInvite, getPlanByTier };

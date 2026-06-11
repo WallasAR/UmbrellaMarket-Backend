@@ -9,7 +9,12 @@ import {
 import { logAudit } from "../services/auditService.js";
 import { listAllOrders, updateOrderStatus } from "../services/orderService.js";
 import { listCoupons, createCoupon } from "../services/couponService.js";
-import { createPharmacy } from "../services/pharmacyService.js";
+import { 
+  createPharmacy, 
+  listAllPharmacies, 
+  updatePharmacy, 
+  deletePharmacy 
+} from "../services/pharmacyService.js";
 import { listAuditLogs } from "../services/auditService.js";
 import {
   listAllBanners,
@@ -118,10 +123,40 @@ const addCoupon = async (req, res, next) => {
   }
 };
 
+const getAllPharmacies = async (req, res, next) => {
+  try {
+    const data = await listAllPharmacies();
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
 const addPharmacy = async (req, res, next) => {
   try {
-    const pharmacy = await createPharmacy(req.body);
+    const pharmacy = await createPharmacy({
+      name: req.body.name,
+      owner_email: req.body.owner_email
+    });
     res.status(201).json(pharmacy);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const editPharmacy = async (req, res, next) => {
+  try {
+    const pharmacy = await updatePharmacy(req.params.id, req.body);
+    res.status(200).json(pharmacy);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const removePharmacy = async (req, res, next) => {
+  try {
+    await deletePharmacy(req.params.id);
+    res.status(200).json({ message: "Pharmacy removed" });
   } catch (error) {
     next(error);
   }
@@ -187,7 +222,10 @@ export {
   setOrderStatus,
   coupons,
   addCoupon,
+  getAllPharmacies,
   addPharmacy,
+  editPharmacy,
+  removePharmacy,
   auditLogs,
   banners,
   addBanner,

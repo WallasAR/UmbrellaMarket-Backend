@@ -17,9 +17,11 @@ import {
   banners,
   addBanner,
   editBanner,
-  removeBanner
+  removeBanner,
+  getAllPharmacies,
+  editPharmacy,
+  removePharmacy
 } from "../controllers/adminController.js";
-import { pending, approve, reject } from "../controllers/onboardingController.js";
 import { getPlatformFinancials, buildPlatformFinancialCsv } from "../services/financialService.js";
 import { getPlatformMetrics } from "../services/metricsService.js";
 import { validateBody } from "../middlewares/validateMiddleware.js";
@@ -55,10 +57,10 @@ router.post("/banners", requireRole("admin"), validateBody(bannerCreateSchema), 
 router.patch("/banners/:id", requireRole("admin"), validateBody(bannerUpdateSchema), editBanner);
 router.delete("/banners/:id", requireRole("admin"), removeBanner);
 router.patch("/users/:id/role", requireRole("admin"), validateBody(roleUpdateSchema), setUserRole);
+router.get("/pharmacies", requireRole("admin"), getAllPharmacies);
 router.post("/pharmacies", requireRole("admin"), addPharmacy);
-router.get("/pharmacies/pending", requireRole("admin"), pending);
-router.patch("/pharmacies/:id/approve", requireRole("admin"), approve);
-router.patch("/pharmacies/:id/reject", requireRole("admin"), validateBody(pharmacyRejectSchema), reject);
+router.put("/pharmacies/:id", requireRole("admin"), editPharmacy);
+router.delete("/pharmacies/:id", requireRole("admin"), removePharmacy);
 router.get("/pharmacies/:pharmacyId/kyc", requireRole("admin"), adminListDocuments);
 router.patch("/kyc/:id/review", requireRole("admin"), validateBody(kycReviewSchema), reviewDocument);
 
