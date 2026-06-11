@@ -54,7 +54,11 @@ import {
   removeBoost,
   boostMetrics,
   getPharmacyLayoutHandler,
-  savePharmacyLayoutHandler
+  savePharmacyLayoutHandler,
+  banners,
+  addBanner,
+  editBanner,
+  removeBanner
 } from "../controllers/pharmacyPanelController.js";
 import { listPharmacyPending, reviewPharmacyPrescription } from "../controllers/prescriptionController.js";
 import { getPharmacyFinancials, buildPharmacyFinancialCsv } from "../services/financialService.js";
