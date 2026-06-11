@@ -3,7 +3,7 @@ import sdb from "./database.js";
 const listFavorites = async (userId) => {
   const { data, error } = await sdb
     .from("Favorite")
-    .select('medicine_id, created_at')
+    .select('medicine_id, created_at, Medicine(id, name, price, discount, average_rating, review_count, requires_prescription, stock, pharmacy_id, category, Pharmacy(id, name), Images(thumb_img))')
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
