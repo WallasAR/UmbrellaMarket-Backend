@@ -105,18 +105,22 @@ export const getPharmacyLayout = async (pharmacyId) => {
 export const savePharmacyLayout = async (pharmacyId, layoutData) => {
   // Simple implementation: Disable other active layouts, upsert new
   if (layoutData.is_active) {
-    await sdb.from("PharmacyLayout")
-      .update({ is_active: false })
-      .eq("pharmacy_id", pharmacyId);
+    let query = sdb.from("PharmacyLayout").update({ is_active: false });
+    if (pharmacyId) {
+       query = query.eq("pharmacy_id", pharmacyId);
+    } else {
+       query = query.eq("is_preset", true);
+    }
+    await query;
   }
 
   const { data: layout, error: layoutError } = await sdb.from("PharmacyLayout")
     .upsert({
-      id: layoutData.id,
+      id: layoutData.id || undefined,
       pharmacy_id: pharmacyId,
-      name: layoutData.name,
+      name: layoutData.name || 'Layout',
       is_active: layoutData.is_active,
-      is_preset: false
+      is_preset: layoutData.is_preset !== undefined ? layoutData.is_preset : false
     })
     .select()
     .single();
@@ -124,11 +128,20 @@ export const savePharmacyLayout = async (pharmacyId, layoutData) => {
   if (layoutError) throw new Error(layoutError.message);
 
   if (layoutData.sections) {
+    const incomingSecIds = layoutData.sections.filter(s => s.id).map(s => s.id);
+    if (incomingSecIds.length > 0) {
+      await sdb.from("PharmacyLayoutSection").delete()
+        .eq("layout_id", layout.id)
+        .not("id", "in", incomingSecIds);
+    } else {
+      await sdb.from("PharmacyLayoutSection").delete().eq("layout_id", layout.id);
+    }
+
     // Upsert sections
     for (const sec of layoutData.sections) {
       const { data: sectionData, error: secError } = await sdb.from("PharmacyLayoutSection")
         .upsert({
-          id: sec.id,
+          id: sec.id || undefined,
           layout_id: layout.id,
           section_type: sec.section_type,
           title: sec.title,
@@ -141,6 +154,15 @@ export const savePharmacyLayout = async (pharmacyId, layoutData) => {
       if (secError) throw new Error(secError.message);
 
       if (sec.items) {
+        const incomingItemIds = sec.items.filter(i => i.id).map(i => i.id);
+        if (incomingItemIds.length > 0) {
+          await sdb.from("PharmacyLayoutItem").delete()
+            .eq("section_id", sectionData.id)
+            .not("id", "in", incomingItemIds);
+        } else {
+          await sdb.from("PharmacyLayoutItem").delete().eq("section_id", sectionData.id);
+        }
+
         for (const item of sec.items) {
           let imageUrl = item.image_url;
 
@@ -156,7 +178,7 @@ export const savePharmacyLayout = async (pharmacyId, layoutData) => {
           }
 
           await sdb.from("PharmacyLayoutItem").upsert({
-            id: item.id,
+            id: item.id || undefined,
             section_id: sectionData.id,
             title: item.title,
             subtitle: item.subtitle,
