@@ -20,7 +20,9 @@ import {
   removeBanner,
   getAllPharmacies,
   editPharmacy,
-  removePharmacy
+  removePharmacy,
+  getGlobalLayout,
+  saveGlobalLayout
 } from "../controllers/adminController.js";
 import { getPlatformFinancials, buildPlatformFinancialCsv } from "../services/financialService.js";
 import { getPlatformMetrics } from "../services/metricsService.js";
@@ -63,6 +65,9 @@ router.put("/pharmacies/:id", requireRole("admin"), editPharmacy);
 router.delete("/pharmacies/:id", requireRole("admin"), removePharmacy);
 router.get("/pharmacies/:pharmacyId/kyc", requireRole("admin"), adminListDocuments);
 router.patch("/kyc/:id/review", requireRole("admin"), validateBody(kycReviewSchema), reviewDocument);
+
+router.get("/layout", requireRole("admin"), getGlobalLayout);
+router.post("/layout", requireRole("admin"), saveGlobalLayout);
 
 router.get("/metrics", requireRole("admin"), async (req, res, next) => {
   try {

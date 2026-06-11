@@ -22,6 +22,7 @@ import {
   updateBanner,
   deleteBanner
 } from "../services/bannerService.js";
+import { getActiveLayout, savePharmacyLayout } from "../services/layoutService.js";
 
 const dashboard = async (req, res, next) => {
   try {
@@ -211,6 +212,24 @@ const removeBanner = async (req, res, next) => {
   }
 };
 
+const getGlobalLayout = async (req, res, next) => {
+  try {
+    const layout = await getActiveLayout(null);
+    res.status(200).json([layout]); // Returns an array to match PharmacyPanel's expectation
+  } catch (error) {
+    next(error);
+  }
+};
+
+const saveGlobalLayout = async (req, res, next) => {
+  try {
+    const layout = await savePharmacyLayout(null, { ...req.body, is_preset: true });
+    res.status(200).json(layout);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   dashboard,
   createMedicine,
@@ -230,5 +249,7 @@ export {
   banners,
   addBanner,
   editBanner,
-  removeBanner
+  removeBanner,
+  getGlobalLayout,
+  saveGlobalLayout
 };
