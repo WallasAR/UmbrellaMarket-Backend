@@ -1,4 +1,16 @@
-import { listPharmacies, getPharmacyById, listNearbyPharmacies } from "../services/pharmacyService.js";
+import { listPharmacies, getPharmacyById, resolveByDomain, listNearbyPharmacies } from "../services/pharmacyService.js";
+
+const resolveDomain = async (req, res, next) => {
+  try {
+    const { domain } = req.query;
+    if (!domain) return res.status(400).json({ error: "Domain query param required" });
+    const pharmacy = await resolveByDomain(domain);
+    if (!pharmacy) return res.status(404).json({ error: "Tenant not found for domain" });
+    res.status(200).json(pharmacy);
+  } catch (error) {
+    next(error);
+  }
+};
 
 const list = async (req, res, next) => {
   try {
@@ -32,4 +44,4 @@ const nearby = async (req, res, next) => {
   }
 };
 
-export { list, getById, nearby };
+export { list, getById, nearby, resolveDomain };

@@ -2,7 +2,6 @@ import sdb from "./database.js";
 import { createNotification } from "./notificationService.js";
 import { sendEmail } from "./emailService.js";
 import { sendWhatsApp } from "./whatsappService.js";
-import { assertCanAddProduct } from "./planLimitService.js";
 
 const LOW_STOCK_THRESHOLD = 10;
 const EXPIRY_WARNING_DAYS = 30;
@@ -68,8 +67,6 @@ const listProducts = async (pharmacyId) => {
 };
 
 const createProduct = async (pharmacyId, payload) => {
-  await assertCanAddProduct(pharmacyId);
-
   const { images, ...medicine } = payload;
   const insertData = { ...medicine, pharmacy_id: pharmacyId, stock: medicine.stock ?? 0 };
 

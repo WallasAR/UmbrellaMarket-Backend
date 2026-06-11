@@ -70,6 +70,7 @@ const registerPharmacy = async (userId, payload) => {
       longitude: payload.longitude ?? null,
       plan_tier: plan.tier,
       commission_rate: plan.commission_rate,
+      tenant_domain: payload.tenant_domain || null,
       onboarding_status: "pending",
       operational_status: "closed",
       active: false,

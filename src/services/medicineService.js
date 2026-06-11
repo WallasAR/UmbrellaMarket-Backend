@@ -157,8 +157,13 @@ const fetchProduct = async (id) => {
   return data;
 };
 
-const listCategories = async () => {
-  const { data, error } = await sdb.from("Medicine").select("category");
+const listCategories = async (filters = {}) => {
+  let query = sdb.from("Medicine").select("category");
+  if (filters.pharmacyId) {
+    query = query.eq("pharmacy_id", filters.pharmacyId);
+  }
+  
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
 
   const categories = [...new Set((data || []).map((item) => item.category).filter(Boolean))];
@@ -180,12 +185,18 @@ const fetchAlternatives = async (productId) => {
     };
   }
 
-  const { data, error } = await sdb
+  let alternativesQuery = sdb
     .from("Medicine")
     .select(PRODUCT_SELECT)
     .ilike("active_ingredient", product.active_ingredient)
     .gt("stock", 0)
     .neq("id", productId);
+
+  if (product.pharmacy_id) {
+    alternativesQuery = alternativesQuery.eq("pharmacy_id", product.pharmacy_id);
+  }
+
+  const { data, error } = await alternativesQuery;
 
   if (error) throw new Error(error.message);
 

@@ -23,6 +23,22 @@ const getPharmacyById = async (id) => {
   return data;
 };
 
+const resolveByDomain = async (domain) => {
+  const { data, error } = await sdb
+    .from("Pharmacy")
+    .select("*")
+    .eq("tenant_domain", domain)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return null; // no rows found
+    }
+    throw new Error(error.message);
+  }
+  return data;
+};
+
 const createPharmacy = async (payload) => {
   const { data, error } = await sdb
     .from("Pharmacy")
@@ -49,4 +65,4 @@ const listNearbyPharmacies = async ({ lat, lng, radiusKm = 10 }) => {
     .sort((a, b) => a.distance_km - b.distance_km);
 };
 
-export { listPharmacies, getPharmacyById, createPharmacy, listNearbyPharmacies };
+export { listPharmacies, getPharmacyById, resolveByDomain, createPharmacy, listNearbyPharmacies };

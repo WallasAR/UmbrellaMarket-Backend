@@ -29,7 +29,8 @@ const getProduct = async (req, res, next) => {
 
 const getCategories = async (req, res, next) => {
   try {
-    const categories = await listCategories();
+    const { pharmacyId } = req.query;
+    const categories = await listCategories({ pharmacyId });
     res.status(200).json(categories);
   } catch (error) {
     next(error);
