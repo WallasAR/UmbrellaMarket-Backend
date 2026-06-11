@@ -31,10 +31,30 @@ import {
   runAlertScan
 } from "../services/pharmacyPanelService.js";
 
+import { getPharmacyLayout, savePharmacyLayout } from "../services/layoutService.js";
+
 const dashboard = async (req, res, next) => {
   try {
     const data = await getDashboard(req.pharmacyId);
     res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getPharmacyLayoutHandler = async (req, res, next) => {
+  try {
+    const layout = await getPharmacyLayout(req.pharmacyId);
+    res.status(200).json(layout);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const savePharmacyLayoutHandler = async (req, res, next) => {
+  try {
+    const layout = await savePharmacyLayout(req.pharmacyId, req.body);
+    res.status(200).json(layout);
   } catch (error) {
     next(error);
   }
@@ -331,5 +351,7 @@ export {
   boosts,
   addBoost,
   removeBoost,
-  boostMetrics
+  boostMetrics,
+  getPharmacyLayoutHandler,
+  savePharmacyLayoutHandler
 };

@@ -91,6 +91,8 @@ migrations/014_phase5_order_groups_prescription_lists.sql
 migrations/015_phase7_banners_fuzzy_cron.sql
 migrations/016_phase8_unified_checkout.sql
 migrations/017_phase8_team_courier_llm.sql
+migrations/018_user_registration_rls.sql
+migrations/019_dynamic_ui_layout.sql
 ```
 
 Essas migrations adicionam:
@@ -120,6 +122,7 @@ Essas migrations adicionam:
 - Banners institucionais, busca fuzzy `pg_trgm`, cron de alertas (Fase 7)
 - Checkout unificado com split Connect (Fase 8)
 - Permissões de equipe, courier externo Uber/99, upload de banners (Fase 8 — migration 017)
+- Layout UI Dinâmico, perfis por farmácia, histórico de pesquisa (Fase 9 — migration 019)
 
 ## Cron de alertas de preço (local)
 

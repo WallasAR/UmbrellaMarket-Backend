@@ -7,7 +7,9 @@ import { fuzzySearchProducts } from "./symptomService.js";
 const PRODUCT_SELECT = `
   *,
   Images!left(thumb_img),
-  Pharmacy!left(id, name, city, latitude, longitude)
+  Pharmacy!left(id, name, city, latitude, longitude),
+  average_rating,
+  review_count
 `;
 
 const parseQueryBoolean = (value) => value === true || value === "true";
@@ -142,7 +144,9 @@ const fetchProduct = async (id) => {
     .select(`
       *,
       Images!left(thumb_img, primary_img, secondary_img, tertiary_img),
-      Pharmacy!left(id, name, city, address)
+      Pharmacy!left(id, name, city, address),
+      average_rating,
+      review_count
     `)
     .eq("id", id)
     .single();

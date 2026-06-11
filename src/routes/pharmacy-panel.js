@@ -52,7 +52,9 @@ import {
   boosts,
   addBoost,
   removeBoost,
-  boostMetrics
+  boostMetrics,
+  getPharmacyLayoutHandler,
+  savePharmacyLayoutHandler
 } from "../controllers/pharmacyPanelController.js";
 import { listPharmacyPending, reviewPharmacyPrescription } from "../controllers/prescriptionController.js";
 import { getPharmacyFinancials, buildPharmacyFinancialCsv } from "../services/financialService.js";
@@ -144,5 +146,8 @@ router.get("/team", requirePharmacyOwner, listTeam);
 router.post("/team", requirePharmacyOwner, validateBody(staffAssignSchema), addTeamMember);
 router.put("/team/:userId/permissions", requirePharmacyOwner, validateBody(staffPermissionsSchema), updateTeamPermissions);
 router.delete("/team/:userId", requirePharmacyOwner, removeTeamMember);
+
+router.get("/layout", requirePharmacyOwner, getPharmacyLayoutHandler);
+router.post("/layout", requirePharmacyOwner, savePharmacyLayoutHandler);
 
 export default router;
