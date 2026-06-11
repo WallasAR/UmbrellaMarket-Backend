@@ -3,11 +3,11 @@ import { getSuggestions, saveSearchHistory, getSearchHistory } from "../services
 const suggestions = async (req, res, next) => {
   try {
     const q = req.query.q || "";
-    // Note: session tracking could use a header or cookie, we'll look for x-session-id
+    const pharmacyId = req.query.pharmacyId;
     const sessionId = req.headers["x-session-id"];
     const userId = req.user?.id; 
     
-    const data = await getSuggestions(q, userId, sessionId);
+    const data = await getSuggestions(q, userId, sessionId, pharmacyId);
     res.status(200).json(data);
   } catch (error) {
     next(error);
