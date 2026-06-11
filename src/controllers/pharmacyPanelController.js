@@ -32,6 +32,12 @@ import {
 } from "../services/pharmacyPanelService.js";
 
 import { getPharmacyLayout, savePharmacyLayout } from "../services/layoutService.js";
+import {
+  listAllBanners,
+  createBanner,
+  updateBanner,
+  deleteBanner
+} from "../services/bannerService.js";
 
 const dashboard = async (req, res, next) => {
   try {
@@ -55,6 +61,43 @@ const savePharmacyLayoutHandler = async (req, res, next) => {
   try {
     const layout = await savePharmacyLayout(req.pharmacyId, req.body);
     res.status(200).json(layout);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const banners = async (req, res, next) => {
+  try {
+    const data = await listAllBanners(req.pharmacyId);
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const addBanner = async (req, res, next) => {
+  try {
+    const payload = { ...req.body, pharmacy_id: req.pharmacyId };
+    const data = await createBanner(payload);
+    res.status(201).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const editBanner = async (req, res, next) => {
+  try {
+    const data = await updateBanner(req.params.id, req.body);
+    res.status(200).json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const removeBanner = async (req, res, next) => {
+  try {
+    await deleteBanner(req.params.id);
+    res.status(200).json({ message: "Banner removed" });
   } catch (error) {
     next(error);
   }
@@ -353,5 +396,9 @@ export {
   removeBoost,
   boostMetrics,
   getPharmacyLayoutHandler,
-  savePharmacyLayoutHandler
+  savePharmacyLayoutHandler,
+  banners,
+  addBanner,
+  editBanner,
+  removeBanner
 };

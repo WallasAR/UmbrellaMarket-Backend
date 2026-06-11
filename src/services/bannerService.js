@@ -1,7 +1,7 @@
 import sdb from "./database.js";
 import { saveBannerImage } from "./bannerUploadService.js";
 
-const listActiveBanners = async ({ category, limit = 10 } = {}) => {
+const listActiveBanners = async ({ category, limit = 10, pharmacyId = null } = {}) => {
   const now = new Date().toISOString();
 
   let query = sdb
@@ -10,6 +10,12 @@ const listActiveBanners = async ({ category, limit = 10 } = {}) => {
     .eq("active", true)
     .order("priority", { ascending: false })
     .limit(Math.min(limit, 20));
+
+  if (pharmacyId) {
+    query = query.or(`pharmacy_id.is.null,pharmacy_id.eq.${pharmacyId}`);
+  } else {
+    query = query.is("pharmacy_id", null);
+  }
 
   if (category) query = query.eq("category", category);
 
@@ -23,11 +29,19 @@ const listActiveBanners = async ({ category, limit = 10 } = {}) => {
   });
 };
 
-const listAllBanners = async () => {
-  const { data, error } = await sdb
+const listAllBanners = async (pharmacyId = null) => {
+  let query = sdb
     .from("InstitutionalBanner")
     .select("*")
     .order("priority", { ascending: false });
+
+  if (pharmacyId) {
+    query = query.eq("pharmacy_id", pharmacyId);
+  } else {
+    query = query.is("pharmacy_id", null);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw new Error(error.message);
   return data || [];

@@ -10,11 +10,13 @@ const ALL_PERMISSIONS = [
   "prescriptions",
   "status",
   "billing",
-  "team"
+  "team",
+  "banners",
+  "layout"
 ];
 
 const ROLE_DEFAULTS = {
-  operator: ["dashboard", "orders"],
+  operator: ["dashboard", "orders", "banners", "layout"],
   pharmacist: [
     "dashboard",
     "orders",
@@ -23,7 +25,9 @@ const ROLE_DEFAULTS = {
     "alerts",
     "financial",
     "prescriptions",
-    "status"
+    "status",
+    "banners",
+    "layout"
   ]
 };
 

@@ -147,7 +147,12 @@ router.post("/team", requirePharmacyOwner, validateBody(staffAssignSchema), addT
 router.put("/team/:userId/permissions", requirePharmacyOwner, validateBody(staffPermissionsSchema), updateTeamPermissions);
 router.delete("/team/:userId", requirePharmacyOwner, removeTeamMember);
 
-router.get("/layout", requirePharmacyOwner, getPharmacyLayoutHandler);
-router.post("/layout", requirePharmacyOwner, savePharmacyLayoutHandler);
+router.get("/layout", requirePharmacyPermission("layout"), getPharmacyLayoutHandler);
+router.post("/layout", requirePharmacyPermission("layout"), savePharmacyLayoutHandler);
+
+router.get("/banners", requirePharmacyPermission("banners"), banners);
+router.post("/banners", requirePharmacyPermission("banners"), addBanner);
+router.patch("/banners/:id", requirePharmacyPermission("banners"), editBanner);
+router.delete("/banners/:id", requirePharmacyPermission("banners"), removeBanner);
 
 export default router;
