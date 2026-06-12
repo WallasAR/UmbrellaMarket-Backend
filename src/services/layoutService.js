@@ -11,6 +11,33 @@ const ensureDir = () => {
   }
 };
 
+const seedPresetLayout = async () => {
+  const layoutId = '00000000-0000-0000-0000-000000000001';
+  
+  const sections = [
+    { id: '11111111-1111-1111-1111-111111111111', layout_id: layoutId, section_type: 'hero_carousel', title: null, display_order: 10, config: {} },
+    { id: '11111111-1111-1111-1111-111111111112', layout_id: layoutId, section_type: 'category_circles', title: 'Compre por Categoria', display_order: 20, config: {} },
+    { id: '11111111-1111-1111-1111-111111111113', layout_id: layoutId, section_type: 'product_slider', title: 'Medicamentos em destaque', display_order: 30, config: {"filter": {"is_featured": true}} },
+    { id: '11111111-1111-1111-1111-111111111114', layout_id: layoutId, section_type: 'promo_grid', title: 'Ofertas Especiais', display_order: 40, config: {} }
+  ];
+
+  for (const sec of sections) {
+    await sdb.from('PharmacyLayoutSection').upsert(sec);
+  }
+
+  const items = [
+    { section_id: '11111111-1111-1111-1111-111111111112', title: 'Higiene', metadata: {"icon": "hygiene"}, display_order: 1 },
+    { section_id: '11111111-1111-1111-1111-111111111112', title: 'Vitaminas', metadata: {"icon": "vitamins"}, display_order: 2 },
+    { section_id: '11111111-1111-1111-1111-111111111112', title: 'Fitness', metadata: {"icon": "fitness"}, display_order: 3 },
+    { section_id: '11111111-1111-1111-1111-111111111112', title: 'Diabetes', metadata: {"icon": "diabetes"}, display_order: 4 }
+  ];
+
+  for (const item of items) {
+    await sdb.from('PharmacyLayoutItem').upsert(item);
+  }
+};
+
+
 /**
  * Gets the active layout for a pharmacy. If no active layout exists,
  * it returns the global default preset layout.
@@ -61,7 +88,42 @@ export const getActiveLayout = async (pharmacyId = null) => {
       .single();
 
     if (presetError) throw presetError;
+
+    if (presetData && presetData.PharmacyLayoutSection.length === 0) {
+      await seedPresetLayout();
+      const { data: newData } = await sdb.from("PharmacyLayout")
+        .select(`
+          id, name, is_preset, is_active,
+          PharmacyLayoutSection(
+            id, section_type, title, subtitle, display_order, config,
+            PharmacyLayoutItem(
+              id, title, subtitle, image_url, link_url, display_order, metadata
+            )
+          )
+        `)
+        .eq("id", "00000000-0000-0000-0000-000000000001")
+        .single();
+      return mapLayout(newData);
+    }
+
     return mapLayout(presetData);
+  }
+
+  if (data && data.is_preset && data.PharmacyLayoutSection.length === 0) {
+    await seedPresetLayout();
+    const { data: newData } = await sdb.from("PharmacyLayout")
+      .select(`
+        id, name, is_preset, is_active,
+        PharmacyLayoutSection(
+          id, section_type, title, subtitle, display_order, config,
+          PharmacyLayoutItem(
+            id, title, subtitle, image_url, link_url, display_order, metadata
+          )
+        )
+      `)
+      .eq("id", "00000000-0000-0000-0000-000000000001")
+      .single();
+    return mapLayout(newData);
   }
 
   return mapLayout(data);
