@@ -1,14 +1,51 @@
 import sdb from "./database.js";
-import fs from "fs";
-import path from "path";
-import { v4 as uuidv4 } from "uuid";
+import { saveBannerImage } from "./bannerUploadService.js";
 
-const BANNER_DIR = path.join(path.resolve(), "src/public/banners");
+const LAYOUT_SELECT = `
+  id,
+  name,
+  is_preset,
+  is_active,
+  PharmacyLayoutSection(
+    id, section_type, title, subtitle, display_order, config,
+    PharmacyLayoutItem(
+      id, title, subtitle, image_url, link_url, display_order, metadata
+    )
+  )
+`;
 
-const ensureDir = () => {
-  if (!fs.existsSync(BANNER_DIR)) {
-    fs.mkdirSync(BANNER_DIR, { recursive: true });
+const resolveLayoutItemImageUrl = (item) => {
+  if (item.file_data) {
+    return saveBannerImage({
+      fileName: item.file_name || "layout-banner.jpg",
+      fileData: item.file_data
+    });
   }
+
+  const url = item.image_url;
+  if (!url) return null;
+  if (url.startsWith("/static/")) return url;
+
+  const dataUrlMatch = url.match(/^data:image\/[\w+.+-]+;base64,(.+)$/);
+  if (dataUrlMatch) {
+    return saveBannerImage({
+      fileName: item.file_name || "layout-banner.jpg",
+      fileData: dataUrlMatch[1]
+    });
+  }
+
+  return url;
+};
+
+const getLayoutById = async (layoutId) => {
+  const { data, error } = await sdb
+    .from("PharmacyLayout")
+    .select(LAYOUT_SELECT)
+    .eq("id", layoutId)
+    .single();
+
+  if (error) throw new Error(error.message);
+  return mapLayout(data);
 };
 
 const PRESET_LAYOUT_ID = "00000000-0000-0000-0000-000000000001";
@@ -110,18 +147,7 @@ export const seedPresetLayout = async () => {
  */
 export const getActiveLayout = async (pharmacyId = null) => {
   let layoutQuery = sdb.from("PharmacyLayout")
-    .select(`
-      id,
-      name,
-      is_preset,
-      is_active,
-      PharmacyLayoutSection(
-        id, section_type, title, subtitle, display_order, config,
-        PharmacyLayoutItem(
-          id, title, subtitle, image_url, link_url, display_order, metadata
-        )
-      )
-    `)
+    .select(LAYOUT_SELECT)
     .eq("is_active", true);
 
   if (pharmacyId) {
@@ -136,18 +162,7 @@ export const getActiveLayout = async (pharmacyId = null) => {
   if (error || !data) {
     // Fallback to default preset
     const { data: presetData, error: presetError } = await sdb.from("PharmacyLayout")
-      .select(`
-        id,
-        name,
-        is_preset,
-        is_active,
-        PharmacyLayoutSection(
-          id, section_type, title, subtitle, display_order, config,
-          PharmacyLayoutItem(
-            id, title, subtitle, image_url, link_url, display_order, metadata
-          )
-        )
-      `)
+      .select(LAYOUT_SELECT)
       .eq("is_preset", true)
       .eq("is_active", true)
       .limit(1)
@@ -163,19 +178,7 @@ export const getActiveLayout = async (pharmacyId = null) => {
         is_active: true
       });
       await seedPresetLayout();
-      const { data: newData } = await sdb.from("PharmacyLayout")
-        .select(`
-          id, name, is_preset, is_active,
-          PharmacyLayoutSection(
-            id, section_type, title, subtitle, display_order, config,
-            PharmacyLayoutItem(
-              id, title, subtitle, image_url, link_url, display_order, metadata
-            )
-          )
-        `)
-        .eq("id", "00000000-0000-0000-0000-000000000001")
-        .maybeSingle();
-      return mapLayout(newData);
+      return getLayoutById(PRESET_LAYOUT_ID);
     }
 
     return mapLayout(presetData);
@@ -183,19 +186,7 @@ export const getActiveLayout = async (pharmacyId = null) => {
 
   if (data && data.is_preset && data.PharmacyLayoutSection.length === 0) {
     await seedPresetLayout();
-    const { data: newData } = await sdb.from("PharmacyLayout")
-      .select(`
-        id, name, is_preset, is_active,
-        PharmacyLayoutSection(
-          id, section_type, title, subtitle, display_order, config,
-          PharmacyLayoutItem(
-            id, title, subtitle, image_url, link_url, display_order, metadata
-          )
-        )
-      `)
-      .eq("id", "00000000-0000-0000-0000-000000000001")
-      .maybeSingle();
-    return mapLayout(newData);
+    return getLayoutById(PRESET_LAYOUT_ID);
   }
 
   return mapLayout(data);
@@ -223,15 +214,7 @@ const mapLayout = (layoutData) => {
 
 export const getPharmacyLayout = async (pharmacyId) => {
   const { data, error } = await sdb.from("PharmacyLayout")
-    .select(`
-      id, name, is_preset, is_active,
-      PharmacyLayoutSection(
-        id, section_type, title, subtitle, display_order, config,
-        PharmacyLayoutItem(
-          id, title, subtitle, image_url, link_url, display_order, metadata
-        )
-      )
-    `)
+    .select(LAYOUT_SELECT)
     .eq("pharmacy_id", pharmacyId)
     .order("created_at", { ascending: false });
 
@@ -301,18 +284,7 @@ export const savePharmacyLayout = async (pharmacyId, layoutData) => {
         }
 
         for (const item of sec.items) {
-          let imageUrl = item.image_url;
-
-          // If the item contains file data, upload it
-          if (item.file_data && item.file_name) {
-            ensureDir();
-            const extension = path.extname(item.file_name || ".jpg") || ".jpg";
-            const safeName = `${pharmacyId}-${uuidv4()}${extension}`;
-            const filePath = path.join(BANNER_DIR, safeName);
-            const buffer = Buffer.from(item.file_data, "base64");
-            fs.writeFileSync(filePath, buffer);
-            imageUrl = `/static/banners/${safeName}`;
-          }
+          const imageUrl = resolveLayoutItemImageUrl(item);
 
           await sdb.from("PharmacyLayoutItem").upsert({
             id: item.id || undefined,
@@ -329,5 +301,5 @@ export const savePharmacyLayout = async (pharmacyId, layoutData) => {
     }
   }
 
-  return mapLayout(layout);
+  return getLayoutById(layout.id);
 };
