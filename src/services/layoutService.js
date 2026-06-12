@@ -21,6 +21,7 @@ export const getActiveLayout = async (pharmacyId = null) => {
       id,
       name,
       is_preset,
+      is_active,
       PharmacyLayoutSection(
         id, section_type, title, subtitle, display_order, config,
         PharmacyLayoutItem(
@@ -46,6 +47,7 @@ export const getActiveLayout = async (pharmacyId = null) => {
         id,
         name,
         is_preset,
+        is_active,
         PharmacyLayoutSection(
           id, section_type, title, subtitle, display_order, config,
           PharmacyLayoutItem(
@@ -80,6 +82,7 @@ const mapLayout = (layoutData) => {
     id: layoutData.id,
     name: layoutData.name,
     isPreset: layoutData.is_preset,
+    is_active: layoutData.is_active,
     sections: sections
   };
 };
