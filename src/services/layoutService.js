@@ -131,7 +131,7 @@ export const getActiveLayout = async (pharmacyId = null) => {
     layoutQuery = layoutQuery.eq("is_preset", true);
   }
 
-  const { data, error } = await layoutQuery.order("created_at", { ascending: false }).limit(1).single();
+  const { data, error } = await layoutQuery.order("created_at", { ascending: false }).limit(1).maybeSingle();
 
   if (error || !data) {
     // Fallback to default preset
@@ -151,11 +151,17 @@ export const getActiveLayout = async (pharmacyId = null) => {
       .eq("is_preset", true)
       .eq("is_active", true)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (presetError) throw presetError;
 
-    if (presetData && presetData.PharmacyLayoutSection.length === 0) {
+    if (!presetData || (presetData && presetData.PharmacyLayoutSection.length === 0)) {
+      await sdb.from('PharmacyLayout').upsert({
+        id: '00000000-0000-0000-0000-000000000001',
+        name: 'Default Modern Layout',
+        is_preset: true,
+        is_active: true
+      });
       await seedPresetLayout();
       const { data: newData } = await sdb.from("PharmacyLayout")
         .select(`
@@ -168,7 +174,7 @@ export const getActiveLayout = async (pharmacyId = null) => {
           )
         `)
         .eq("id", "00000000-0000-0000-0000-000000000001")
-        .single();
+        .maybeSingle();
       return mapLayout(newData);
     }
 
@@ -188,7 +194,7 @@ export const getActiveLayout = async (pharmacyId = null) => {
         )
       `)
       .eq("id", "00000000-0000-0000-0000-000000000001")
-      .single();
+      .maybeSingle();
     return mapLayout(newData);
   }
 
