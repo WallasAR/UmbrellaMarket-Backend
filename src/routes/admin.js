@@ -22,7 +22,8 @@ import {
   editPharmacy,
   removePharmacy,
   getGlobalLayout,
-  saveGlobalLayout
+  saveGlobalLayout,
+  restoreGlobalLayout
 } from "../controllers/adminController.js";
 import { getPlatformFinancials, buildPlatformFinancialCsv } from "../services/financialService.js";
 import { getPlatformMetrics } from "../services/metricsService.js";
@@ -68,6 +69,7 @@ router.patch("/kyc/:id/review", requireRole("admin"), validateBody(kycReviewSche
 
 router.get("/layout", requireRole("admin"), getGlobalLayout);
 router.post("/layout", requireRole("admin"), saveGlobalLayout);
+router.post("/layout/restore", requireRole("admin"), restoreGlobalLayout);
 
 router.get("/metrics", requireRole("admin"), async (req, res, next) => {
   try {

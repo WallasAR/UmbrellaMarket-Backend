@@ -22,7 +22,7 @@ import {
   updateBanner,
   deleteBanner
 } from "../services/bannerService.js";
-import { getActiveLayout, savePharmacyLayout } from "../services/layoutService.js";
+import { getActiveLayout, savePharmacyLayout, restoreFactoryPreset } from "../services/layoutService.js";
 
 const dashboard = async (req, res, next) => {
   try {
@@ -230,6 +230,15 @@ const saveGlobalLayout = async (req, res, next) => {
   }
 };
 
+const restoreGlobalLayout = async (req, res, next) => {
+  try {
+    const layout = await restoreFactoryPreset();
+    res.status(200).json(layout);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   dashboard,
   createMedicine,
@@ -251,5 +260,6 @@ export {
   editBanner,
   removeBanner,
   getGlobalLayout,
-  saveGlobalLayout
+  saveGlobalLayout,
+  restoreGlobalLayout
 };

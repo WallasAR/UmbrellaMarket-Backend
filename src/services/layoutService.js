@@ -11,8 +11,74 @@ const ensureDir = () => {
   }
 };
 
+const PRESET_LAYOUT_ID = "00000000-0000-0000-0000-000000000001";
+
+export const getFactoryLayoutTemplate = () => ({
+  name: "Default Modern Layout",
+  is_active: true,
+  isPreset: true,
+  sections: [
+    {
+      section_type: "hero_carousel",
+      title: null,
+      display_order: 10,
+      config: {},
+      items: []
+    },
+    {
+      section_type: "category_circles",
+      title: "Compre por Categoria",
+      display_order: 20,
+      config: {},
+      items: [
+        { title: "Higiene", metadata: { icon: "hygiene" }, display_order: 1 },
+        { title: "Vitaminas", metadata: { icon: "vitamins" }, display_order: 2 },
+        { title: "Fitness", metadata: { icon: "fitness" }, display_order: 3 },
+        { title: "Diabetes", metadata: { icon: "diabetes" }, display_order: 4 }
+      ]
+    },
+    {
+      section_type: "product_slider",
+      title: "Medicamentos em destaque",
+      display_order: 30,
+      config: { filter: { is_featured: true } },
+      items: []
+    },
+    {
+      section_type: "promo_grid",
+      title: "Ofertas Especiais",
+      display_order: 40,
+      config: {},
+      items: []
+    }
+  ]
+});
+
+export const restoreFactoryPreset = async () => {
+  await sdb.from("PharmacyLayoutSection").delete().eq("layout_id", PRESET_LAYOUT_ID);
+  await sdb.from("PharmacyLayoutItem").delete().in(
+    "section_id",
+    [
+      "11111111-1111-1111-1111-111111111111",
+      "11111111-1111-1111-1111-111111111112",
+      "11111111-1111-1111-1111-111111111113",
+      "11111111-1111-1111-1111-111111111114"
+    ]
+  );
+
+  await sdb.from("PharmacyLayout").upsert({
+    id: PRESET_LAYOUT_ID,
+    name: "Default Modern Layout",
+    is_preset: true,
+    is_active: true
+  });
+
+  await seedPresetLayout();
+  return getActiveLayout(null);
+};
+
 export const seedPresetLayout = async () => {
-  const layoutId = '00000000-0000-0000-0000-000000000001';
+  const layoutId = PRESET_LAYOUT_ID;
   
   const sections = [
     { id: '11111111-1111-1111-1111-111111111111', layout_id: layoutId, section_type: 'hero_carousel', title: null, display_order: 10, config: {} },
