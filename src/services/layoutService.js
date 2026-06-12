@@ -39,6 +39,36 @@ const resolveLayoutItemImageUrl = async (item) => {
   return url;
 };
 
+const resolveChromeLogoBlock = async (block) => {
+  if (!block) return block;
+
+  const next = { ...block };
+  if (next.logo_file_data) {
+    next.logo_url = await saveBannerImage({
+      fileName: next.logo_file_name || "layout-logo.png",
+      fileData: next.logo_file_data
+    });
+    delete next.logo_file_data;
+    delete next.logo_file_name;
+  }
+
+  return next;
+};
+
+const resolveThemeConfig = async (config) => {
+  if (!config) return config;
+
+  const next = { ...config };
+  if (next.navbar) {
+    next.navbar = await resolveChromeLogoBlock(next.navbar);
+  }
+  if (next.footer) {
+    next.footer = await resolveChromeLogoBlock(next.footer);
+  }
+
+  return next;
+};
+
 const getLayoutById = async (layoutId) => {
   const { data, error } = await sdb
     .from("PharmacyLayout")
@@ -261,16 +291,20 @@ export const savePharmacyLayout = async (pharmacyId, layoutData) => {
 
     // Upsert sections
     for (const sec of layoutData.sections) {
+      const sectionPayload = {
+        id: sec.id || undefined,
+        layout_id: layout.id,
+        section_type: sec.section_type,
+        title: sec.title,
+        subtitle: sec.subtitle,
+        display_order: sec.display_order,
+        config: sec.section_type === "theme_config" && sec.config
+          ? await resolveThemeConfig(sec.config)
+          : sec.config
+      };
+
       const { data: sectionData, error: secError } = await sdb.from("PharmacyLayoutSection")
-        .upsert({
-          id: sec.id || undefined,
-          layout_id: layout.id,
-          section_type: sec.section_type,
-          title: sec.title,
-          subtitle: sec.subtitle,
-          display_order: sec.display_order,
-          config: sec.config
-        })
+        .upsert(sectionPayload)
         .select().single();
       
       if (secError) throw new Error(secError.message);
