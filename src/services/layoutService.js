@@ -11,7 +11,7 @@ const ensureDir = () => {
   }
 };
 
-const seedPresetLayout = async () => {
+export const seedPresetLayout = async () => {
   const layoutId = '00000000-0000-0000-0000-000000000001';
   
   const sections = [
