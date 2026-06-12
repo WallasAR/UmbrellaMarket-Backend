@@ -123,6 +123,9 @@ Essas migrations adicionam:
 - Checkout unificado com split Connect (Fase 8)
 - Permissões de equipe, courier externo Uber/99, upload de banners (Fase 8 — migration 017)
 - Layout UI Dinâmico, perfis por farmácia, histórico de pesquisa (Fase 9 — migration 019)
+- Bucket Supabase Storage `banners` para imagens de layout persistentes em produção (migration 025)
+
+**Importante (Render/produção):** imagens de layout e banners são gravadas no **Supabase Storage** (bucket `banners`), não no disco do servidor. Execute a migration `025_banners_storage_bucket.sql` no Supabase antes de publicar layouts com imagens. URLs antigas `/static/banners/...` deixam de funcionar após redeploy — reenvie o layout para gerar novas URLs.
 
 ## Cron de alertas de preço (local)
 

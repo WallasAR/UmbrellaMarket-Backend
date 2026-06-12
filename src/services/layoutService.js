@@ -14,7 +14,7 @@ const LAYOUT_SELECT = `
   )
 `;
 
-const resolveLayoutItemImageUrl = (item) => {
+const resolveLayoutItemImageUrl = async (item) => {
   if (item.file_data) {
     return saveBannerImage({
       fileName: item.file_name || "layout-banner.jpg",
@@ -24,7 +24,9 @@ const resolveLayoutItemImageUrl = (item) => {
 
   const url = item.image_url;
   if (!url) return null;
-  if (url.startsWith("/static/")) return url;
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/static/")) {
+    return url;
+  }
 
   const dataUrlMatch = url.match(/^data:image\/[\w+.+-]+;base64,(.+)$/);
   if (dataUrlMatch) {
@@ -284,7 +286,7 @@ export const savePharmacyLayout = async (pharmacyId, layoutData) => {
         }
 
         for (const item of sec.items) {
-          const imageUrl = resolveLayoutItemImageUrl(item);
+          const imageUrl = await resolveLayoutItemImageUrl(item);
 
           await sdb.from("PharmacyLayoutItem").upsert({
             id: item.id || undefined,

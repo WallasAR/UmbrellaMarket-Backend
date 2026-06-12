@@ -1,25 +1,33 @@
-import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
+import sdb from "./database.js";
 
-const BANNER_DIR = path.join(path.resolve(), "src/public/banners");
+const BUCKET = process.env.SUPABASE_BANNERS_BUCKET || "banners";
 
-const ensureBannerDir = () => {
-  if (!fs.existsSync(BANNER_DIR)) {
-    fs.mkdirSync(BANNER_DIR, { recursive: true });
-  }
+const MIME_BY_EXT = {
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".webp": "image/webp",
+  ".gif": "image/gif"
 };
 
-const saveBannerImage = ({ fileName, fileData }) => {
-  ensureBannerDir();
-
-  const extension = path.extname(fileName || ".jpg") || ".jpg";
+const saveBannerImage = async ({ fileName, fileData }) => {
+  const extension = path.extname(fileName || ".jpg").toLowerCase() || ".jpg";
   const safeName = `banner-${uuidv4()}${extension}`;
-  const filePath = path.join(BANNER_DIR, safeName);
   const buffer = Buffer.from(fileData, "base64");
+  const contentType = MIME_BY_EXT[extension] || "image/jpeg";
 
-  fs.writeFileSync(filePath, buffer);
-  return `/static/banners/${safeName}`;
+  const { error } = await sdb.storage
+    .from(BUCKET)
+    .upload(safeName, buffer, { contentType, upsert: false });
+
+  if (error) {
+    throw new Error(`Banner upload failed: ${error.message}`);
+  }
+
+  const { data } = sdb.storage.from(BUCKET).getPublicUrl(safeName);
+  return data.publicUrl;
 };
 
 export { saveBannerImage };

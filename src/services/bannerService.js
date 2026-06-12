@@ -53,7 +53,7 @@ const createBanner = async (payload) => {
   delete insertPayload.file_name;
 
   if (payload.file_data) {
-    insertPayload.image_url = saveBannerImage({
+    insertPayload.image_url = await saveBannerImage({
       fileName: payload.file_name,
       fileData: payload.file_data
     });
