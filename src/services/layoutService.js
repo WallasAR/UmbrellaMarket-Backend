@@ -70,11 +70,13 @@ const resolveThemeConfig = async (config) => {
 };
 
 const getLayoutById = async (layoutId) => {
-  const { data, error } = await sdb
+  const { data: result, error } = await sdb
     .from("PharmacyLayout")
     .select(LAYOUT_SELECT)
     .eq("id", layoutId)
-    .single();
+    .limit(1);
+
+  const data = result && result.length > 0 ? result[0] : null;
 
   if (error) throw new Error(error.message);
   return mapLayout(data);
@@ -124,16 +126,12 @@ export const getFactoryLayoutTemplate = () => ({
 });
 
 export const restoreFactoryPreset = async () => {
+  const { data: sections } = await sdb.from("PharmacyLayoutSection").select("id").eq("layout_id", PRESET_LAYOUT_ID);
+  if (sections && sections.length > 0) {
+    const sectionIds = sections.map(s => s.id);
+    await sdb.from("PharmacyLayoutItem").delete().in("section_id", sectionIds);
+  }
   await sdb.from("PharmacyLayoutSection").delete().eq("layout_id", PRESET_LAYOUT_ID);
-  await sdb.from("PharmacyLayoutItem").delete().in(
-    "section_id",
-    [
-      "11111111-1111-1111-1111-111111111111",
-      "11111111-1111-1111-1111-111111111112",
-      "11111111-1111-1111-1111-111111111113",
-      "11111111-1111-1111-1111-111111111114"
-    ]
-  );
 
   await sdb.from("PharmacyLayout").upsert({
     id: PRESET_LAYOUT_ID,
@@ -189,16 +187,18 @@ export const getActiveLayout = async (pharmacyId = null) => {
     layoutQuery = layoutQuery.eq("is_preset", true);
   }
 
-  const { data, error } = await layoutQuery.order("created_at", { ascending: false }).limit(1).maybeSingle();
+  const { data: result, error } = await layoutQuery.order("created_at", { ascending: false }).limit(1);
+  const data = result && result.length > 0 ? result[0] : null;
 
   if (error || !data) {
     // Fallback to default preset
-    const { data: presetData, error: presetError } = await sdb.from("PharmacyLayout")
+    const { data: presetResult, error: presetError } = await sdb.from("PharmacyLayout")
       .select(LAYOUT_SELECT)
       .eq("is_preset", true)
       .eq("is_active", true)
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+    
+    const presetData = presetResult && presetResult.length > 0 ? presetResult[0] : null;
 
     if (presetError) throw presetError;
 
@@ -282,10 +282,22 @@ export const savePharmacyLayout = async (pharmacyId, layoutData) => {
   if (layoutData.sections) {
     const incomingSecIds = layoutData.sections.filter(s => s.id).map(s => s.id);
     if (incomingSecIds.length > 0) {
-      await sdb.from("PharmacyLayoutSection").delete()
+      const { data: oldSections } = await sdb.from("PharmacyLayoutSection")
+        .select("id")
         .eq("layout_id", layout.id)
-        .not("id", "in", incomingSecIds);
+        .not("id", "in", `(${incomingSecIds.join(",")})`);
+        
+      if (oldSections && oldSections.length > 0) {
+        const oldSecIds = oldSections.map(s => s.id);
+        await sdb.from("PharmacyLayoutItem").delete().in("section_id", oldSecIds);
+        await sdb.from("PharmacyLayoutSection").delete().in("id", oldSecIds);
+      }
     } else {
+      const { data: oldSections } = await sdb.from("PharmacyLayoutSection").select("id").eq("layout_id", layout.id);
+      if (oldSections && oldSections.length > 0) {
+        const oldSecIds = oldSections.map(s => s.id);
+        await sdb.from("PharmacyLayoutItem").delete().in("section_id", oldSecIds);
+      }
       await sdb.from("PharmacyLayoutSection").delete().eq("layout_id", layout.id);
     }
 
@@ -314,7 +326,7 @@ export const savePharmacyLayout = async (pharmacyId, layoutData) => {
         if (incomingItemIds.length > 0) {
           await sdb.from("PharmacyLayoutItem").delete()
             .eq("section_id", sectionData.id)
-            .not("id", "in", incomingItemIds);
+            .not("id", "in", `(${incomingItemIds.join(",")})`);
         } else {
           await sdb.from("PharmacyLayoutItem").delete().eq("section_id", sectionData.id);
         }
